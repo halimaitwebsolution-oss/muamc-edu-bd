@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="/static/css/all.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
     :root {
       --navy: #0d2b45; --navy2: #174070; --navy3: #1f5490;
@@ -119,65 +120,58 @@
     }
 
     /* Header */
-    .ac-hdr { display: grid; grid-template-columns: 80px 1fr 86px; align-items: center; gap: 10px; padding: 12px 18px 10px; border-bottom: 1.5px solid #000; }
-    .ac-hdr-logo { width: 76px; height: 76px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+    .ac-hdr { display: grid; grid-template-columns: 80px 1fr 86px; align-items: center; gap: 10px; padding: 8px 18px 6px; border-bottom: 1.5px solid #000; }
+    .ac-hdr-logo { width: 72px; height: 72px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
     .ac-hdr-logo img { width: 100%; height: 100%; object-fit: contain; }
     .ac-hdr-mid { text-align: center; }
-    .ac-hdr-mid h1 { font-size: 15.5pt; font-weight: 900; color: #000; line-height: 1.2; margin-bottom: 3px; letter-spacing: .5px; }
-    .ac-hdr-mid .ac-hdr-addr { font-size: 11pt; color: #222; margin-bottom: 3px; }
-    .ac-hdr-mid .ac-hdr-eiin { font-size: 11.5pt; font-weight: 700; margin-bottom: 5px; }
-    .ac-hdr-mid .ac-hdr-exam-name { display: inline-block; border: 1.5px solid #888; background: #f0f0f0; font-size: 11pt; font-weight: 600; padding: 3px 18px; }
+    .ac-hdr-mid h1 { font-size: 15.5pt; font-weight: 900; color: #000; line-height: 1.2; margin-bottom: 2px; letter-spacing: .5px; }
+    .ac-hdr-mid .ac-hdr-addr { font-size: 10.5pt; color: #222; margin-bottom: 2px; }
+    .ac-hdr-mid .ac-hdr-eiin { font-size: 11pt; font-weight: 700; margin-bottom: 3px; }
+    .ac-hdr-mid .ac-hdr-exam-name { display: inline-block; border: 1.5px solid #888; background: #f0f0f0; font-size: 10.5pt; font-weight: 600; padding: 2px 16px; }
     .ac-hdr-qr { text-align: center; }
-    .ac-hdr-qr-box { width: 76px; height: 76px; border: 1px solid #aaa; display: flex; align-items: center; justify-content: center; font-size: 8pt; color: #555; background: #fafafa; }
+    .ac-hdr-qr-box { width: 72px; height: 72px; border: 1px solid #aaa; display: flex; align-items: center; justify-content: center; font-size: 8pt; color: #555; background: #fafafa; }
     .ac-hdr-qr span { display: block; font-size: 7.5pt; color: #666; margin-top: 2px; text-align: center; }
 
     /* ADMIT CARD Title */
-    .ac-admit-title-wrap { padding: 10px 18px 0; }
-    .ac-admit-title { text-align: center; font-size: 15pt; font-weight: 700; letter-spacing: 4px; padding: 7px 0; border: 2.5px solid #000; color: #000; margin: 8px 0; }
+    .ac-admit-title-wrap { padding: 4px 18px 0; }
+    .ac-admit-title { text-align: center; font-size: 15pt; font-weight: 700; letter-spacing: 4px; padding: 4px 0; border: 2px solid #000; color: #000; margin: 4px 0; }
 
     /* Student Info + Photo Section */
-    .ac-info-photo { display: grid; grid-template-columns: 1fr 115px; gap: 12px; padding: 6px 18px 10px; position: relative; z-index: 1; }
+    .ac-info-photo { display: grid; grid-template-columns: 1fr 115px; gap: 12px; padding: 4px 18px 6px; position: relative; z-index: 1; }
     .ac-info-left {}
     .ac-info-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
-    .ac-info-field { display: flex; align-items: baseline; font-size: 11pt; padding: 7px 0; border-bottom: 1px solid #ccc; gap: 5px; }
+    .ac-info-field { display: flex; align-items: baseline; font-size: 11pt; padding: 4px 0; border-bottom: 1px solid #ccc; gap: 5px; }
     .ac-info-field:last-child { border-bottom: none; }
     .ac-info-label { font-weight: 600; white-space: nowrap; color: #000; min-width: 96px; flex-shrink: 0; }
     .ac-info-colon { margin-right: 2px; }
     .ac-info-value { flex: 1; border-bottom: 1px solid #555; min-width: 60px; padding-bottom: 1px; color: #000; font-size: 11pt; }
     .ac-photo-wrap { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 4px; }
-    .ac-photo { width: 108px; height: 136px; object-fit: cover; border: 1.5px solid #555; display: block; }
-    .ac-photo-ph { width: 108px; height: 136px; border: 1.5px solid #aaa; background: #fafafa; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10pt; color: #777; text-align: center; line-height: 1.6; }
+    .ac-photo { width: 104px; height: 130px; object-fit: cover; border: 1.5px solid #555; display: block; }
+    .ac-photo-ph { width: 104px; height: 130px; border: 1.5px solid #aaa; background: #fafafa; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10pt; color: #777; text-align: center; line-height: 1.6; }
     .ac-photo-lbl { font-size: 9pt; color: #444; text-align: center; }
 
-    /* Subject + Exam Info Section */
-    .ac-subj-exam { display: grid; grid-template-columns: 1fr 130px; gap: 0; padding: 0 18px 8px; position: relative; z-index: 1; }
-    .ac-sub-tbl-wrap { border: 1px solid #999; }
-    .ac-sub-tbl { width: 100%; border-collapse: collapse; font-size: 10.5pt; }
-    .ac-sub-tbl th { background: #e8e8e8; color: #000; padding: 5px 8px; text-align: center; border: 1px solid #999; font-weight: 700; font-size: 10.5pt; }
-    .ac-sub-tbl td { padding: 4px 8px; border: 1px solid #ccc; font-size: 10pt; }
-    .ac-sub-tbl td.ac-sname { text-align: left; padding-left: 10px; }
-    .ac-sub-tbl td.ac-scode { text-align: center; width: 48px; }
-    .ac-sub-tbl .ac-opt-row td { background: #f5f5f5; font-size: 10pt; text-align: center; }
-    .ac-exam-info { display: flex; flex-direction: column; justify-content: center; align-items: center; border: 1px solid #999; border-left: none; padding: 12px 8px; gap: 20px; }
-    .ac-exam-date-block { text-align: center; }
-    .ac-exam-date-label { font-size: 11pt; font-weight: 700; color: #000; border-bottom: 1px solid #999; padding-bottom: 5px; margin-bottom: 5px; }
-    .ac-exam-date-val { font-size: 11.5pt; font-weight: 600; color: #000; }
-    .ac-exam-time-block { text-align: center; }
-    .ac-exam-time-label { font-size: 11pt; font-weight: 700; color: #000; border-bottom: 1px solid #999; padding-bottom: 5px; margin-bottom: 5px; }
-    .ac-exam-time-val { font-size: 16pt; font-weight: 700; color: #000; }
+    /* Examination Routine Table (12pt font) */
+    .ac-routine-wrap { margin: 6px 18px 4px; position: relative; z-index: 1; }
+    .ac-routine-title { text-align: center; font-size: 13pt; font-weight: 700; margin-bottom: 4px; text-decoration: underline; }
+    .ac-routine-tbl { width: 100%; border-collapse: collapse; font-size: 12pt; border: 1.5px solid #000; }
+    .ac-routine-tbl th { background: #e8e8e8; color: #000; padding: 5px 8px; text-align: center; border: 1px solid #000; font-weight: 700; font-size: 12pt; }
+    .ac-routine-tbl td { padding: 5px 8px; border: 1px solid #888; font-size: 12pt; text-align: center; }
+    .ac-routine-tbl th:nth-child(1), .ac-routine-tbl td:nth-child(1) { width: 34%; }
+    .ac-routine-tbl th:nth-child(2), .ac-routine-tbl td:nth-child(2) { width: 46%; }
+    .ac-routine-tbl th:nth-child(3), .ac-routine-tbl td:nth-child(3) { width: 20%; }
 
-    /* Instructions */
-    .ac-instructions { margin: 6px 18px 8px; border: 1px solid #555; padding: 10px 14px; font-size: 10.5pt; line-height: 1.9; position: relative; z-index: 1; flex: 1; }
+    /* Instructions (12pt font) */
+    .ac-instructions { margin: 6px 18px 6px; border: 1.5px solid #000; padding: 8px 14px; font-size: 12pt; line-height: 1.5; position: relative; z-index: 1; flex: 1; }
     .ac-instructions strong { font-weight: 700; }
-    .ac-instructions .ac-inst-title { font-weight: 700; text-decoration: underline; display: inline; }
+    .ac-instructions .ac-inst-title { font-weight: 700; text-decoration: underline; display: inline-block; margin-bottom: 3px; font-size: 12pt; }
 
     /* Footer / Signature */
-    .ac-footer { display: flex; justify-content: flex-end; padding: 14px 18px 5px; position: relative; z-index: 1; }
+    .ac-footer { display: flex; justify-content: flex-end; padding: 8px 18px 2px; position: relative; z-index: 1; }
     .ac-sign-block { text-align: center; }
-    .ac-sign-img { width: 150px; height: 48px; object-fit: contain; display: block; margin: 0 auto; }
-    .ac-sign-line { width: 150px; border-bottom: 1px solid #555; margin-bottom: 5px; height: 48px; }
+    .ac-sign-img { width: 140px; height: 40px; object-fit: contain; display: block; margin: 0 auto; }
+    .ac-sign-line { width: 140px; border-bottom: 1px solid #555; margin-bottom: 4px; height: 40px; }
     .ac-sign-nm { font-size: 11pt; font-weight: 600; color: #000; }
-    .ac-issue { text-align: right; padding: 4px 18px 12px; border-top: 1px solid #ddd; position: relative; z-index: 1; }
+    .ac-issue { text-align: right; padding: 2px 18px 6px; border-top: 1px solid #ddd; position: relative; z-index: 1; }
     .ac-issue-lbl { font-size: 9pt; color: #444; }
     .ac-issue-val { font-size: 9pt; color: #444; }
 
@@ -199,10 +193,18 @@
     /* ═══ PRINT ═══ */
     @media print {
       .no-print { display: none !important; }
-      body { background: #fff !important; }
+      body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
       .top-nav-bar, .site-header, .ac-sel, .btn-row, .pg-hd { display: none !important; }
       .main { padding: 0 !important; margin: 0 !important; }
-      .ac-page { box-shadow: none !important; border: none !important; }
+      .ac-page { 
+        box-shadow: none !important; 
+        border: 1.5px solid #000 !important; 
+        margin: 0 auto !important; 
+        width: 100% !important;
+        min-height: 275mm !important;
+        page-break-after: avoid !important;
+        page-break-inside: avoid !important;
+      }
       #admit-modal { display: none !important; }
 
       /* Preserve exact colors — prevent browser from inverting/stripping backgrounds */
@@ -214,7 +216,7 @@
 
       @page {
         size: A4 portrait;
-        margin: 10mm;
+        margin: 6mm 8mm;
       }
     }
 
@@ -424,18 +426,28 @@
               <option value="2029-2030">2029-2030</option>
             </select>
           </div>
-          <div class="fg"><label>Examination Start Date</label><input id="ad-date" type="date"></div>
-          <div class="fg"><label>Examination Time</label><input id="ad-time" value="10:00 AM"></div>
           <div class="fg" style="grid-column: 1 / -1;">
             <label>Principal's Signature</label>
             <div class="sig-upload-wrap">
               <div class="sig-preview" id="sig-preview-box"><span id="sig-preview-hint">No signature</span></div>
               <label class="btn btn-outline btn-sm" style="cursor:pointer;">
-                📁 Upload Signature
+                Upload Signature
                 <input type="file" id="sig-file-input" accept="image/*" style="display:none;" onchange="handleSigUpload(event)">
               </label>
-              <button class="sig-clear-btn" onclick="clearSignature()">✕ Remove</button>
+              <button class="sig-clear-btn" onclick="clearSignature()">Remove</button>
             </div>
+          </div>
+          <div class="fg" style="grid-column: 1 / -1;">
+            <label>Examination Routine (Excel Upload)</label>
+            <div class="sig-upload-wrap">
+              <label class="btn btn-outline btn-sm" style="cursor:pointer;">
+                Upload Routine (.xlsx)
+                <input type="file" id="routine-file-input" accept=".xlsx,.xls" style="display:none;" onchange="handleRoutineUpload(event)">
+              </label>
+              <button class="sig-clear-btn" id="routine-clear-btn" onclick="clearRoutine()" style="display:none;">Remove</button>
+              <span id="routine-status" style="font-size:.74rem;color:var(--muted);"></span>
+            </div>
+            <div id="routine-preview" style="margin-top:8px;display:none;max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r);"></div>
           </div>
         </div>
       </div>
@@ -447,8 +459,8 @@
         <h3 id="admit-list-hd">Students</h3>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           <span class="meta" id="admit-list-count"></span>
-          <button class="btn btn-success btn-sm" onclick="batchPrint()" id="batch-print-btn" style="display:none;">🖨 Print All</button>
-          <button class="btn btn-primary btn-sm" onclick="batchDownloadPDF()" id="batch-pdf-btn" style="display:none;">⬇ Download All PDFs</button>
+          <button class="btn btn-success btn-sm" onclick="batchPrint()" id="batch-print-btn" style="display:none;">Print All</button>
+          <button class="btn btn-primary btn-sm" onclick="batchDownloadPDF()" id="batch-pdf-btn" style="display:none;">Download All PDFs</button>
         </div>
       </div>
       <div class="card-body np" id="admit-list-body"></div>
@@ -467,8 +479,8 @@
       </div>
       <div class="admit-modal-body" id="admit-modal-body"></div>
       <div class="admit-modal-ftr no-print">
-        <button class="btn btn-success" onclick="printAdmitModal()">🖨 Print</button>
-        <button class="btn btn-primary" onclick="downloadAdmitModalPDF()">⬇ Download PDF</button>
+        <button class="btn btn-success" onclick="printAdmitModal()">Print</button>
+        <button class="btn btn-primary" onclick="downloadAdmitModalPDF()">Download PDF</button>
         <button class="btn btn-outline" onclick="closeAdmitModal()">Close</button>
       </div>
     </div>
@@ -603,6 +615,59 @@
       }
     }
 
+    // ── Exam Routine (from Excel) ───────────────────────────────────────
+    let _examRoutine = [];
+
+    function handleRoutineUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+          const sheet = workbook.Sheets[workbook.SheetNames[0]];
+          const json = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, dateNF: 'dd/mm/yyyy' });
+
+          _examRoutine = [];
+          for (let i = 1; i < json.length; i++) {
+            const row = json[i];
+            if (!row || (!row[0] && !row[1])) continue;
+            _examRoutine.push({
+              dateDay: String(row[0] || '').trim(),
+              subject: String(row[1] || '').trim(),
+              time: String(row[2] || '').trim()
+            });
+          }
+
+          _showRoutinePreview();
+          $('routine-status').textContent = _examRoutine.length + ' entries loaded';
+          $('routine-clear-btn').style.display = '';
+        } catch (err) {
+          alert('Error reading Excel file: ' + err.message);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function clearRoutine() {
+      _examRoutine = [];
+      $('routine-file-input').value = '';
+      $('routine-preview').style.display = 'none';
+      $('routine-preview').innerHTML = '';
+      $('routine-status').textContent = '';
+      $('routine-clear-btn').style.display = 'none';
+    }
+
+    function _showRoutinePreview() {
+      const prev = $('routine-preview');
+      if (!_examRoutine.length) { prev.style.display = 'none'; return; }
+      prev.style.display = '';
+      prev.innerHTML = '<table class="data-tbl"><thead><tr><th>Date and Day</th><th>Subject</th><th>Time</th></tr></thead><tbody>' +
+        _examRoutine.map(r => `<tr><td>${r.dateDay}</td><td>${r.subject}</td><td>${r.time}</td></tr>`).join('') +
+        '</tbody></table>';
+    }
+
     // ── Filter students by class + group ───────────────────────────────────
     function filterAdmitStudents() {
       const cls = $$('ad-class'), grp = $$('ad-group'), session = $$('ad-session');
@@ -695,8 +760,7 @@
     }
 
     // ── Build admit card HTML — Classic Format matching the provided image ─
-    function buildAdmit(stu, et, ey, sd, tm, qrId) {
-      const subs = getFilteredAdmitSubjects(stu);
+    function buildAdmit(stu, et, ey, qrId) {
       const photoH = stu.photo
         ? `<img src="${stu.photo}" class="ac-photo" alt="Photo">`
         : `<div class="ac-photo-ph">Candidate<br>Photo</div>`;
@@ -704,42 +768,7 @@
       const dobF = stu.dob
         ? new Date(stu.dob).toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'})
         : '';
-      const sdF = sd
-        ? new Date(sd).toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'})
-        : 'DD-MM-YYYY';
       const grpLabel = stu.group === 'Business' ? 'Business Studies' : stu.group;
-
-      // Split subjects into two columns (left half & right half)
-      // Separate optional subjects from main subjects
-      const mainSubs = subs.filter(s => !s.optionalGroup);
-      const optSubs  = subs.filter(s =>  s.optionalGroup);
-      const half = Math.ceil(mainSubs.length / 2);
-      const leftSubs  = mainSubs.slice(0, half);
-      const rightSubs = mainSubs.slice(half);
-      const maxRows = Math.max(leftSubs.length, rightSubs.length);
-
-      let subRows = '';
-      for (let i = 0; i < maxRows; i++) {
-        const l = leftSubs[i]  || null;
-        const r = rightSubs[i] || null;
-        subRows += `<tr>
-          <td class="ac-sname">${l ? l.name : ''}</td>
-          <td class="ac-scode">${l ? l.code : ''}</td>
-          <td class="ac-sname">${r ? r.name : ''}</td>
-          <td class="ac-scode">${r ? r.code : ''}</td>
-        </tr>`;
-      }
-
-      // Optional subject row
-      const optRows = optSubs.length
-        ? optSubs.map(os => `<tr class="ac-opt-row">
-            <td colspan="2" style="text-align:center;">Optional Subject: ${os.name}</td>
-            <td class="ac-scode" colspan="2">${os.code}</td>
-          </tr>`).join('')
-        : `<tr class="ac-opt-row">
-            <td colspan="2" style="text-align:center;">Optional Subject</td>
-            <td class="ac-scode" colspan="2">Code</td>
-          </tr>`;
 
       // Now build QR placeholder or actual QR element
       const qrBox = `<div class="ac-hdr-qr-box" id="${qrId}">QR Code</div>`;
@@ -832,35 +861,27 @@
           </div>
         </div>
 
-        <!-- SUBJECT TABLE + EXAM DATE/TIME -->
-        <div class="ac-subj-exam">
-          <div class="ac-sub-tbl-wrap">
-            <table class="ac-sub-tbl">
-              <thead>
-                <tr>
-                  <th class="ac-sname">Subject Name</th>
-                  <th class="ac-scode">Code</th>
-                  <th class="ac-sname">Subject Name</th>
-                  <th class="ac-scode">Code</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${subRows}
-                ${optRows}
-              </tbody>
-            </table>
-          </div>
-          <div class="ac-exam-info">
-            <div class="ac-exam-date-block">
-              <div class="ac-exam-date-label">Exam Date:</div>
-              <div class="ac-exam-date-val">${sdF}</div>
-            </div>
-            <div class="ac-exam-time-block">
-              <div class="ac-exam-time-label">Exam Start at:</div>
-              <div class="ac-exam-time-val">${tm || '00:00'}</div>
-            </div>
-          </div>
-        </div>
+        <!-- EXAMINATION ROUTINE -->
+        ${_examRoutine.length ? `
+        <div class="ac-routine-wrap">
+          <div class="ac-routine-title">Examination Routine</div>
+          <table class="ac-routine-tbl">
+            <thead>
+              <tr>
+                <th>Date and Day</th>
+                <th>Subject</th>
+                <th>Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${_examRoutine.map(r => `<tr>
+                <td>${r.dateDay}</td>
+                <td>${r.subject}</td>
+                <td>${r.time}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>` : ''}
 
         <!-- EXAMINATION INSTRUCTIONS -->
         <div class="ac-instructions">
@@ -898,9 +919,9 @@
       if (!stu) return;
       _currentAdmitId = id;
 
-      const et = $$('ad-exam'), ey = $$('ad-session'), sd = $$('ad-date'), tm = $$('ad-time');
+      const et = $$('ad-exam'), ey = $$('ad-session');
       const qrId = 'ac-qr-modal-' + id;
-      $('admit-modal-body').innerHTML = buildAdmit(stu, et, ey, sd, tm, qrId);
+      $('admit-modal-body').innerHTML = buildAdmit(stu, et, ey, qrId);
       $('admit-modal-title').textContent = `${stu.name} (${stu.roll})`;
       $('admit-modal').style.display = 'flex';
       document.body.style.overflow = 'hidden';
@@ -925,7 +946,7 @@
       if (!win) { alert('Pop-up blocked. Please allow pop-ups.'); return; }
       win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Admit Card</title>
         <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700;900&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-        <style>${document.querySelector('style').textContent}@media print{*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}body{padding:0;}@page{size:A4 portrait;margin:10mm;}}</style>
+        <style>${document.querySelector('style').textContent}@media print{*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}body{padding:0;margin:0;}@page{size:A4 portrait;margin:6mm 8mm;}.ac-page{border:1.5px solid #000!important;box-shadow:none!important;page-break-after:avoid!important;page-break-inside:avoid!important;min-height:275mm!important;}}</style>
         </head><body>${el.innerHTML}
   <script>
     (function(){
@@ -972,10 +993,10 @@
     // ── Batch Print (all filtered students, one window) ───────────────────
     function batchPrint() {
       if (!_filteredStudents.length) { alert('No students loaded. Select a class and group first.'); return; }
-      const et = $$('ad-exam'), ey = $$('ad-session'), sd = $$('ad-date'), tm = $$('ad-time');
+      const et = $$('ad-exam'), ey = $$('ad-session');
       const cards = _filteredStudents.map((s, idx) => {
         const qrId = 'bp-qr-' + s.id;
-        return buildAdmit(s, et, ey, sd, tm, qrId);
+        return buildAdmit(s, et, ey, qrId);
       }).join('<div style="page-break-after:always;"></div>');
 
       const win = window.open('', '_blank', 'width=900,height=700,scrollbars=yes');
@@ -983,8 +1004,8 @@
       win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Batch Admit Cards</title>
         <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700;900&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
         <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
-        <style>${document.querySelector('style').textContent}@media print{*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}body{padding:0;}@page{size:A4 portrait;margin:8mm;}}</style>
-        </head><body style="background:#fff;">${cards}</body></html>`);
+        <style>${document.querySelector('style').textContent}@media print{*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}body{padding:0;margin:0;}@page{size:A4 portrait;margin:6mm 8mm;}.ac-page{border:1.5px solid #000!important;box-shadow:none!important;min-height:275mm!important;}}</style>
+        </head><body style="background:#fff;margin:0;padding:0;">${cards}</body></html>`);
       win.document.close();
       // Generate QR codes then print
       setTimeout(() => {
@@ -1002,9 +1023,9 @@
     async function batchDownloadPDF() {
       if (!_filteredStudents.length) { alert('No students loaded. Select a class and group first.'); return; }
       const btn = $('batch-pdf-btn');
-      btn.disabled = true; btn.textContent = '⏳ Generating...';
+      btn.disabled = true; btn.textContent = 'Generating...';
 
-      const et = $$('ad-exam'), ey = $$('ad-session'), sd = $$('ad-date'), tm = $$('ad-time');
+      const et = $$('ad-exam'), ey = $$('ad-session');
       const cls = $$('ad-class'), grp = $$('ad-group');
 
       // Build a hidden container with all admit cards
@@ -1014,7 +1035,7 @@
         const qrId = 'bdl-qr-' + s.id;
         const wrapper = document.createElement('div');
         wrapper.style.pageBreakAfter = 'always';
-        wrapper.innerHTML = buildAdmit(s, et, ey, sd, tm, qrId);
+        wrapper.innerHTML = buildAdmit(s, et, ey, qrId);
         container.appendChild(wrapper);
       });
       document.body.appendChild(container);
@@ -1037,7 +1058,7 @@
       }).from(container).save();
 
       document.body.removeChild(container);
-      btn.disabled = false; btn.textContent = '⬇ Download All PDFs';
+      btn.disabled = false; btn.textContent = 'Download All PDFs';
     }
 
     // ── Auth ───────────────────────────────────────────────────────────────
@@ -1055,10 +1076,6 @@
         $('nav-avatar').textContent = sess.role === 'admin' ? 'A' : 'T';
         $('nav-name').textContent = sess.role === 'admin' ? 'Admin' : 'Teacher';
         $('nav-role').textContent = sess.role === 'admin' ? 'System Admin' : 'Marks Entry';
-
-        // Pre-fill date with today
-        const today = new Date().toISOString().split('T')[0];
-        $('ad-date').value = today;
 
         await loadData();
 
