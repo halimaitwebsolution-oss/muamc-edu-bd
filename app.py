@@ -2094,14 +2094,21 @@ def import_students():
     if not import_list:
         return jsonify({'ok': False, 'message': 'No students provided'}), 400
 
-    existing_rolls = {r[0] for r in db.session.query(Student.roll).all()}
+    # Scope roll uniqueness to (roll, cls, group, session) so the same roll in different years is allowed
+    existing_rolls = set()
+    for _s in db.session.query(Student.roll, Student.cls, Student.group, Student.session).all():
+        existing_rolls.add((_s[0], _s[1], _s[2], _s[3]))
     imported = skipped = 0
 
     for student_data in import_list:
         if not student_data.get('name') or not student_data.get('roll'):
             skipped += 1
             continue
-        if student_data['roll'] in existing_rolls:
+        _imp_roll = student_data['roll']
+        _imp_cls = student_data.get('cls', 'Class-XI')
+        _imp_group = student_data.get('group', 'Science')
+        _imp_session = (student_data.get('session') or student_data.get('year', '')).strip().replace('\u2013', '-').replace('\u2013', '-')
+        if (_imp_roll, _imp_cls, _imp_group, _imp_session) in existing_rolls:
             skipped += 1
             continue
 
@@ -2111,16 +2118,16 @@ def import_students():
             name=student_data.get('name', ''),
             roll=student_data.get('roll', ''),
             reg=student_data.get('reg', ''),
-            cls=student_data.get('cls', 'Class-XI'),
-            group=student_data.get('group', 'Science'),
+            cls=_imp_cls,
+            group=_imp_group,
             section=student_data.get('section', ''),
             father=student_data.get('father', ''),
             mother=student_data.get('mother', ''),
             dob=student_data.get('dob', ''),
             phone=student_data.get('phone', ''),
             religion=student_data.get('religion', ''),
-            year=student_data.get('year', '').strip().replace('–', '-').replace('\u2013', '-'),
-            session=student_data.get('session', student_data.get('year', '')).strip().replace('–', '-').replace('\u2013', '-'),
+            year=student_data.get('year', '').strip().replace('\u2013', '-').replace('\u2013', '-'),
+            session=_imp_session,
             photo='',
             optional_subjects=(
                 student_data.get('optional_subject') or
@@ -2135,7 +2142,7 @@ def import_students():
             ),
         )
         db.session.add(student)
-        existing_rolls.add(student_data['roll'])
+        existing_rolls.add((_imp_roll, _imp_cls, _imp_group, _imp_session))
         imported += 1
 
     try:
@@ -2830,19 +2837,32 @@ def public_result_search():
     cls  = request.args.get('cls')
     grp  = request.args.get('group')
     roll = request.args.get('roll')
+    ses  = (request.args.get('session') or request.args.get('year') or '').strip().replace('\u2013', '-').replace('\u2013', '-')
 
     if not cls or not grp or not roll:
         return jsonify({'ok': False, 'message': 'Missing search parameters'}), 400
 
-    student = Student.query.filter_by(cls=cls, group=grp, roll=roll).first()
+    # Scope student lookup by session/year when provided to handle same roll across years
+    query = Student.query.filter_by(cls=cls, group=grp, roll=roll)
+    if ses:
+        query = query.filter(
+            (Student.session == ses) | (Student.year == ses)
+        )
+    student = query.first()
     if not student:
         return jsonify({'ok': False, 'message': 'Student not found with provided details.'}), 404
 
     # Get marks for this student
     marks_data = _get_marks_dict(student.id)
 
-    # Compute merit position (rank within same cls + group)
-    peers = Student.query.filter_by(cls=student.cls, group=student.group).all()
+    # Compute merit position (rank within same cls + group + session)
+    peer_query = Student.query.filter_by(cls=student.cls, group=student.group)
+    stu_session = (student.session or student.year or '').strip()
+    if stu_session:
+        peer_query = peer_query.filter(
+            (Student.session == stu_session) | (Student.year == stu_session)
+        )
+    peers = peer_query.all()
     peer_ids = [p.id for p in peers]
     all_marks = _get_marks_dict(peer_ids)
     peer_scores = []
@@ -3041,7 +3061,14 @@ def import_marks():
     if not isinstance(rows, list) or not rows:
         return jsonify({'ok': False, 'message': 'No mark rows provided'}), 400
 
-    roll_to_id = {s.roll: s.id for s in Student.query.all()}
+    # Build roll-to-id mapping keyed by (roll, cls, group) to avoid collisions
+    # when the same roll number exists across different classes/years.
+    _all_students = Student.query.all()
+    roll_cls_group_to_id = {}
+    roll_to_id_fallback = {}
+    for s in _all_students:
+        roll_cls_group_to_id[(s.roll, s.cls, s.group)] = s.id
+        roll_to_id_fallback[s.roll] = s.id  # fallback: last-wins (legacy compat)
     imported = skipped = 0
     warnings = []
 
@@ -3058,7 +3085,14 @@ def import_marks():
             skipped += 1
             continue
 
-        student_id = roll_to_id.get(roll)
+        # Try composite key first (cls + group from row), then fall back to roll-only
+        _row_cls = str(row.get('Class') or row.get('cls') or '').strip()
+        _row_grp = str(row.get('Group') or row.get('group') or '').strip()
+        student_id = None
+        if _row_cls and _row_grp:
+            student_id = roll_cls_group_to_id.get((roll, _row_cls, _row_grp))
+        if not student_id:
+            student_id = roll_to_id_fallback.get(roll)
         if not student_id:
             skipped += 1
             warnings.append(f'Student roll not found: {roll}')
@@ -4254,24 +4288,31 @@ def execute_promotion():
         scored.append((stu, gpa, total))
     scored.sort(key=lambda x: (-x[1], -x[2]))
 
+    # Build set of existing Class-XII rolls scoped by (roll, group, session) for collision detection
     existing_xii_rolls = set()
     for s in students:
         if s.cls == 'Class-XII':
-            try:
-                existing_xii_rolls.add(int(s.roll))
-            except (ValueError, TypeError):
-                pass
+            existing_xii_rolls.add((s.roll, s.group, s.session or s.year))
 
-    next_roll = 1
     promoted_count = 0
     roll_assignments = []
 
     for stu, gpa, total in scored:
-        while next_roll in existing_xii_rolls:
-            next_roll += 1
-        roll_assignments.append((stu.id, str(next_roll), gpa, total))
-        existing_xii_rolls.add(next_roll)
-        next_roll += 1
+        stu_session = (stu.session or stu.year or '').strip()
+        # Try to keep the student's original roll number
+        if (stu.roll, stu.group, stu_session) not in existing_xii_rolls:
+            new_roll = stu.roll
+        else:
+            # Collision: generate a new sequential roll only as fallback
+            try:
+                next_num = int(stu.roll) + 1
+            except (ValueError, TypeError):
+                next_num = 1
+            while (str(next_num), stu.group, stu_session) in existing_xii_rolls:
+                next_num += 1
+            new_roll = str(next_num)
+        roll_assignments.append((stu.id, new_roll, gpa, total))
+        existing_xii_rolls.add((new_roll, stu.group, stu_session))
 
     student_map = {s.id: s for s in students}
     for sid, new_roll, gpa, total in roll_assignments:
@@ -4436,8 +4477,26 @@ def re_enroll(sid):
         return jsonify({'ok': False, 'message': 'Student not found'}), 404
 
     new_year       = body.get('year', datetime.utcnow().strftime('%Y'))
+    new_session    = (str(new_year).strip().replace('\u2013', '-').replace('\u2013', '-'))
+
+    # Check for roll uniqueness in the target year before re-enrolling
+    _existing = Student.query.filter_by(
+        roll=student.roll,
+        cls='Class-XI',
+        group=student.group,
+    ).filter(
+        (Student.session == new_session) | (Student.year == new_session)
+    ).filter(
+        Student.id != sid
+    ).first()
+    if _existing:
+        return jsonify({
+            'ok': False,
+            'message': f'Roll {student.roll} already exists in Class-XI / {student.group} for session {new_session}. Please change the roll number first.'
+        }), 409
+
     student.year   = new_year
-    student.session = new_year
+    student.session = new_session
     student.cls    = 'Class-XI'
 
     try:

@@ -1736,8 +1736,8 @@
         return;
       }
 
-      if (LS.students().find(s => s.roll === roll)) {
-        setAlert('add-alert', 'err', 'A student with this roll number already exists.');
+      if (LS.students().find(s => s.roll === roll && s.cls === cls && s.group === grp && s.session === session)) {
+        setAlert('add-alert', 'err', 'A student with this roll number already exists in this class/group/session.');
         return;
       }
 
@@ -1921,7 +1921,7 @@
 
       if (!n || !ro || !cl || !gr || !sn) { setAlert('edit-alert', 'err', 'Name, Roll Number, Class, Group and Session are required.'); return; }
 
-      if (LS.students().find(s => s.id !== id && s.roll === ro)) { setAlert('edit-alert', 'err', 'A student with this roll number already exists.'); return; }
+      if (LS.students().find(s => s.id !== id && s.roll === ro && s.cls === cl && s.group === gr && s.session === sn)) { setAlert('edit-alert', 'err', 'A student with this roll number already exists in this class/group/session.'); return; }
 
       try {
         const stu = LS.students().find(s => s.id === id);
