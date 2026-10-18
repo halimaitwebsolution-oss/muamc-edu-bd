@@ -4671,6 +4671,7 @@ def get_exam_routines():
     return jsonify({'ok': True, 'data': [r.to_dict() for r in routines]})
 
 
+@app.route('/api/exam-routine', methods=['POST'])
 @app.route('/api/exam-routine/upload', methods=['POST'])
 @require_auth
 def upload_exam_routine():
