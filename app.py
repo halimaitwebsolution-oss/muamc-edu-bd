@@ -45,48 +45,29 @@ app = Flask(__name__, static_folder='static')
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Database Configuration
-# Priority: DATABASE_URL env var → local SQLite fallback (local dev only)
+# Priority: DATABASE_URL env var → local SQLite fallback
 # DATABASE_URL is loaded from .env if python-dotenv is installed.
-_is_render = os.environ.get('RENDER') == 'true'
-_db_raw_url = (os.environ.get('DATABASE_URL') or '').strip().strip('"\'')
+_db_raw_url = os.environ.get('DATABASE_URL')
 _db_url = None
-_db_error = None
 
 if _db_raw_url:
     if _db_raw_url.startswith('postgres://'):
         _db_raw_url = _db_raw_url.replace('postgres://', 'postgresql://', 1)
     
     if _db_raw_url.startswith('postgresql'):
-        # Ensure sslmode is present if connecting to a remote Render PostgreSQL host
-        _connect_args = {'connect_timeout': 15}
-        if 'render.com' in _db_raw_url and 'sslmode' not in _db_raw_url:
-            _connect_args['sslmode'] = 'require'
-
         try:
             from sqlalchemy import create_engine, text
-            _test_engine = create_engine(_db_raw_url, connect_args=_connect_args)
+            _test_engine = create_engine(_db_raw_url, connect_args={'connect_timeout': 5})
             with _test_engine.connect() as _c:
                 _c.execute(text("SELECT 1"))
             _test_engine.dispose()
             _db_url = _db_raw_url
             print(f"[DB] Successfully connected to PostgreSQL database.")
         except Exception as _err:
-            _db_error = str(_err)
-            print(f"[DB] ERROR: Primary PostgreSQL database connection failed ({_err}).")
-            if _is_render:
-                print("[DB] CRITICAL WARNING: Running on Render with a failed PostgreSQL connection!")
-                print("[DB] Render's filesystem is ephemeral. Binding to DATABASE_URL so SQLAlchemy can retry.")
-                _db_url = _db_raw_url
-            else:
-                print("[DB] Falling back to local SQLite database (hsc_academy.db)...")
+            print(f"[DB] Primary PostgreSQL database connection failed ({_err}).")
+            print("[DB] Falling back to local SQLite database (hsc_academy.db)...")
 
 if not _db_url:
-    if _is_render:
-        print("=" * 80)
-        print("[DB] CRITICAL ERROR: DATABASE_URL is NOT set in Render Environment Variables!")
-        print("[DB] Render is falling back to an ephemeral SQLite database with 0 records.")
-        print("[DB] Please go to Render Dashboard -> Web Service -> Environment -> Add DATABASE_URL")
-        print("=" * 80)
     _db_url = f"sqlite:///{os.path.join(BASE_DIR, 'hsc_academy.db')}"
 
 app.config['SQLALCHEMY_DATABASE_URI'] = _db_url
@@ -94,21 +75,18 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # pool_size / max_overflow are not supported by SQLite — only set for PostgreSQL
 if _db_url.startswith('postgresql'):
-    _engine_opts = {
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
         'pool_size': 10,
         'max_overflow': 20,
         'pool_recycle': 3600,
         'pool_pre_ping': True,
     }
-    if 'render.com' in _db_url and 'sslmode' not in _db_url:
-        _engine_opts['connect_args'] = {'sslmode': 'require'}
-    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = _engine_opts
 
 # Secret key for server-side session (session cookie auth)
 app.secret_key = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
 
 # ── Session cookie hardening (ISSUE-006) ───────────────────────────
-app.config['SESSION_COOKIE_SECURE']    = bool(_is_render or not _db_url.startswith('sqlite'))
+app.config['SESSION_COOKIE_SECURE']    = not _db_url.startswith('sqlite')  # True in prod (HTTPS)
 app.config['SESSION_COOKIE_HTTPONLY']  = True   # Prevent JS access
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # CSRF protection
 app.config['PERMANENT_SESSION_LIFETIME'] = 28800  # 8-hour session timeout
@@ -1061,22 +1039,15 @@ def health_check_detail():
         with db.engine.connect() as conn:
             conn.execute(text('SELECT 1'))
         safe_url = _db_url.split('@')[-1] if '@' in _db_url else _db_url
-        is_sqlite = _db_url.startswith('sqlite')
-        students_count = Student.query.count()
         return jsonify({
             'ok': True,
             'status': 'healthy',
             'database': {
                 'connected': True,
-                'type': 'SQLite' if is_sqlite else 'PostgreSQL',
                 'host': safe_url,
-                'students': students_count,
+                'students': Student.query.count(),
                 'teachers': Teacher.query.count(),
                 'marks_entries': Mark.query.count(),
-                'configured_database_url_present': bool(_db_raw_url),
-                'connection_error': _db_error,
-                'is_render': _is_render,
-                'warning': 'RUNNING ON EPHEMERAL SQLITE ON RENDER! Data is empty and will be lost on restart. Please set DATABASE_URL in Render Web Service environment variables.' if (_is_render and is_sqlite) else None
             },
             'version': '1.0.0',
             'timestamp': datetime.utcnow().isoformat() + 'Z',
