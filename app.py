@@ -1927,9 +1927,19 @@ def _public_result_summary_inner():
     subs = temp_subs
 
     # Resolve optional codes
-    selected_optional = stu_marks.get('selectedOptional', '')
     opt_codes = [c.strip() for c in (optional_subject or '').split('/') if c.strip()]
-    if not opt_codes and selected_optional:
+    selected_optional = stu_marks.get('selectedOptional', '')
+    if opt_codes:
+        LEGACY_CODE_MAP = {
+            'Science': {'178': 'scienceBio', '179': 'scienceBio', '265': 'scienceMath', '266': 'scienceMath'},
+            'Humanities': {'121': 'humLogic', '122': 'humLogic', '273': 'humHome', '274': 'humHome'},
+            'Business': {'109': 'busEcon', '110': 'busEcon', '273': 'busHome', '274': 'busHome'},
+        }
+        for c in opt_codes:
+            if c in LEGACY_CODE_MAP.get(group, {}):
+                selected_optional = LEGACY_CODE_MAP[group][c]
+                break
+    elif selected_optional:
         LEGACY_MAP = {
             'scienceBio': ['178', '179'], 'scienceMath': ['265', '266'],
             'humLogic': ['121', '122'],   'humHome': ['273', '274'],
@@ -2109,12 +2119,17 @@ def _public_result_summary_inner():
 
     # Resolve optional subject label
     OPTIONAL_SUBJECTS_LABELS = {
-        'Science':     [{'id':'scienceBio','label':'Biology (1st & 2nd Paper)'},{'id':'scienceMath','label':'Higher Mathematics (1st & 2nd Paper)'}],
-        'Humanities':  [{'id':'humLogic',  'label':'Logic (1st & 2nd Paper)'},  {'id':'humHome',   'label':'Home Science (1st & 2nd Paper)'}],
-        'Business':    [{'id':'busEcon',   'label':'Economics (1st & 2nd Paper)'},{'id':'busHome',  'label':'Home Science (1st & 2nd Paper)'}],
+        'Science':     [{'id':'scienceBio','codes':['178','179'],'label':'Biology (1st & 2nd Paper)'},{'id':'scienceMath','codes':['265','266'],'label':'Higher Mathematics (1st & 2nd Paper)'}],
+        'Humanities':  [{'id':'humLogic', 'codes':['121','122'],'label':'Logic (1st & 2nd Paper)'},  {'id':'humHome',  'codes':['273','274'],'label':'Home Science (1st & 2nd Paper)'}],
+        'Business':    [{'id':'busEcon',  'codes':['109','110'],'label':'Economics (1st & 2nd Paper)'},{'id':'busHome', 'codes':['273','274'],'label':'Home Science (1st & 2nd Paper)'}],
     }
     opt_label = 'N/A'
-    if selected_optional:
+    if opt_codes:
+        for o in OPTIONAL_SUBJECTS_LABELS.get(group, []):
+            if any(c in o.get('codes', []) for c in opt_codes):
+                opt_label = o['label']
+                break
+    if opt_label == 'N/A' and selected_optional:
         for o in OPTIONAL_SUBJECTS_LABELS.get(group, []):
             if o['id'] == selected_optional:
                 opt_label = o['label']

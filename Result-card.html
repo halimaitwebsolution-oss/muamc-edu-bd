@@ -936,8 +936,8 @@
     }
 
     function computeStudentGPAAndResult(stu, marks, subs) {
-      const optionalSelected = (marks && marks.selectedOptional) || 
-                               getOptionalIdByCode(stu.group, stu.optionalSubjects || stu.optional_subject || stu.optional_subjects);
+      const optionalSelected = getOptionalIdByCode(stu.group, stu.optionalSubjects || stu.optional_subject || stu.optional_subjects) ||
+                               (marks && marks.selectedOptional);
       
       let tGPA = 0, cnt = 0, fail = 0, tMark = 0;
       let hasAbsent = false;
@@ -1234,7 +1234,8 @@
       const db = _marks;
       const marks = db[id][examType];
       const cats = getStudentSubjects(stu, stu.cls);
-      const optionalSelected = marks.selectedOptional;
+      const optionalSelected = getOptionalIdByCode(stu.group, stu.optionalSubjects || stu.optional_subject || stu.optional_subjects) ||
+                               (marks && marks.selectedOptional);
 
       // Merit position
       const peers = _students.filter(s => s.cls === stu.cls && s.group === stu.group);
@@ -1492,7 +1493,8 @@
           if (!marks) return; // Skip students with no marks recorded for this exam
 
           generatedCount++;
-          const optionalSelected = marks.selectedOptional;
+          const optionalSelected = getOptionalIdByCode(stu.group, stu.optionalSubjects || stu.optional_subject || stu.optional_subjects) ||
+                                   (marks && marks.selectedOptional);
           const curStudentSubs = flatStudentSubs(stu, cls);
           const resObj = computeStudentGPAAndResult(stu, marks, curStudentSubs);
           let fail = resObj.failCount, tMark = resObj.totalMark, mMax = 0, failSubs = [];

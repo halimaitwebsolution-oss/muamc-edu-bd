@@ -120,3 +120,4 @@ scratch/
 *.sqlite
 *.sqlite3
 caveman/
+~$*
