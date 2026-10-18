@@ -307,3 +307,38 @@ class AdmissionApplication(db.Model):
             'reviewedAt':             self.reviewed_at.strftime('%d/%m/%Y %I:%M %p') if self.reviewed_at else '',
         }
 
+
+class ExamRoutine(db.Model):
+    """Exam routine for classes, groups, and sessions."""
+    __tablename__ = 'exam_routines'
+    __table_args__ = (
+        db.Index('ix_exam_routines_cls_grp_sess', 'cls', 'group', 'session'),
+    )
+
+    id         = db.Column(db.Integer,     primary_key=True, autoincrement=True)
+    cls        = db.Column(db.String(50),  nullable=False)   # Class-XI / Class-XII
+    group      = db.Column(db.String(50),  nullable=False)   # Science / Humanities / Business
+    session    = db.Column(db.String(50),  nullable=False)   # e.g. '2024-2025'
+    exam_name  = db.Column(db.String(100), default='')       # e.g. 'Pre-test Examination-2026'
+    date_text  = db.Column(db.String(100), nullable=False)  # e.g. '12/11/2026' or '12/11/2026 Sunday'
+    day_text   = db.Column(db.String(50),  default='')       # e.g. 'Sunday'
+    subject    = db.Column(db.String(255), nullable=False)  # e.g. 'Physics 1st Paper'
+    time_text  = db.Column(db.String(100), default='')       # e.g. '10:00 AM - 1:00 PM'
+    order_idx  = db.Column(db.Integer,     default=0)
+    created_at = db.Column(db.DateTime,    default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id':        self.id,
+            'cls':       self.cls,
+            'group':     self.group,
+            'session':   self.session,
+            'examName':  self.exam_name,
+            'date':      self.date_text,
+            'day':       self.day_text,
+            'subject':   self.subject,
+            'time':      self.time_text,
+            'orderIdx':  self.order_idx,
+            'createdAt': self.created_at.strftime('%d/%m/%Y %I:%M %p') if self.created_at else ''
+        }
+
