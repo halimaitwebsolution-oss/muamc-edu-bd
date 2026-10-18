@@ -51,10 +51,17 @@ _db_raw_url = os.environ.get('DATABASE_URL')
 _db_url = None
 
 if _db_raw_url:
+    # Normalise legacy Heroku-style URL
     if _db_raw_url.startswith('postgres://'):
         _db_raw_url = _db_raw_url.replace('postgres://', 'postgresql://', 1)
 
     if _db_raw_url.startswith('postgresql'):
+        # IMPORTANT: Force psycopg2 dialect explicitly.
+        # SQLAlchemy 2.x defaults to psycopg (v3) for plain postgresql:// URLs.
+        # We ship psycopg2-binary, NOT psycopg v3, so we must pin the driver.
+        if '+' not in _db_raw_url.split('://')[0]:
+            _db_raw_url = _db_raw_url.replace('postgresql://', 'postgresql+psycopg2://', 1)
+
         # Add sslmode=require for Render-hosted PostgreSQL if not already present
         if 'sslmode' not in _db_raw_url:
             _db_raw_url += '?sslmode=require'
