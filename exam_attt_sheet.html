@@ -1,46 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Exam Attendance Sheet — Moinuddin Adarsha Mohila College</title>
-  <meta name="description" content="Generate exam attendance signature sheets in landscape A4 format with bulk routine import.">
+  <title>Exam Attendance Sheet &mdash; Moinuddin Adarsha Mohila College</title>
   <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700;900&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/all.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
-    /* ═══════════════ DESIGN TOKENS ═══════════════ */
     :root {
       --navy: #0d2b45; --navy2: #174070; --navy3: #1f5490;
       --gold: #a97c28; --gold2: #c9973a; --gold3: #e8b84b;
       --slate: #f1f4f8; --slate2: #e8ecf2; --white: #fff;
       --txt: #0f172a; --txt2: #334155; --muted: #64748b;
       --border: #dde3ed; --border2: #c8d2e0;
-      --red: #b91c1c; --green: #166534; --amber: #92400e;
-      --shadow-xs: 0 1px 2px rgba(0,0,0,.06);
-      --shadow-sm: 0 1px 4px rgba(13,43,69,.08), 0 1px 3px rgba(13,43,69,.05);
-      --shadow: 0 4px 16px rgba(13,43,69,.09);
+      --red: #b91c1c; --green: #166534;
+      --shadow-sm: 0 1px 4px rgba(13,43,69,.08);
       --shadow-lg: 0 8px 32px rgba(13,43,69,.14);
       --r: 6px; --r-md: 10px; --r-lg: 14px;
     }
-
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-behavior: smooth; }
-    body { font-family: 'Source Sans 3', sans-serif; background: var(--slate); color: var(--txt); display: flex; flex-direction: column; min-height: 100vh; }
+    body { font-family: 'Source Sans 3', sans-serif; background: var(--slate); color: var(--txt); display: flex; flex-direction: column; }
 
     /* ═══ TOP NAV ═══ */
     .top-nav-bar { position: fixed; top: 0; left: 0; right: 0; height: 70px; z-index: 201; background: linear-gradient(180deg,#0d2b45 0%,#0a2138 100%); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; border-bottom: 1px solid rgba(255,255,255,.08); box-shadow: 0 4px 12px rgba(0,0,0,.15); }
     .top-nav-logo { display: flex; align-items: center; gap: 14px; }
     .top-nav-logo-img { width: 48px; height: 48px; border-radius: 50%; background: #fff; border: 2.5px solid var(--gold2); overflow: hidden; display: flex; align-items: center; justify-content: center; }
-    .top-nav-logo-img img { width: 100%; height: 100%; object-fit: contain; display: block; }
+    .top-nav-logo-img img { width: 100%; height: 100%; object-fit: contain; }
     .top-nav-logo-text h1 { font-family: 'Merriweather', serif; font-size: .85rem; font-weight: 700; color: #fff; }
     .top-nav-logo-text p { font-size: .58rem; color: rgba(255,255,255,.5); margin-top: 2px; }
     .top-nav-admin { display: flex; align-items: center; gap: 16px; }
+    .top-nav-admin-info { display: flex; align-items: center; gap: 10px; }
+    .top-nav-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--gold2); display: flex; align-items: center; justify-content: center; font-size: .95rem; font-weight: 700; color: #fff; }
+    .top-nav-name { font-size: .78rem; font-weight: 700; color: #fff; }
+    .top-nav-role { font-size: .65rem; color: rgba(255,255,255,.7); }
     .logout-btn { padding: 8px 16px; border-radius: var(--r); border: 1px solid rgba(255,255,255,.3); background: transparent; color: #fff; font-size: .78rem; font-family: inherit; cursor: pointer; font-weight: 600; transition: all .15s; }
     .logout-btn:hover { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.6); }
-    .hdr-hamburger { display: none; background: none; border: none; color: #fff; font-size: 1.4rem; cursor: pointer; width: 32px; height: 32px; align-items: center; justify-content: center; transition: all .15s; border-radius: var(--r); }
-    .hdr-hamburger:hover { background: rgba(255,255,255,.1); }
+    .hdr-hamburger { display: none; background: none; border: none; color: #fff; font-size: 1.4rem; cursor: pointer; width: 32px; height: 32px; align-items: center; justify-content: center; }
 
     /* ═══ SIDEBAR ═══ */
     .site-header { background: linear-gradient(180deg,#0d2b45 0%,#0a2138 100%); position: fixed; left: 0; top: 70px; width: 220px; height: calc(100vh - 70px); z-index: 200; border-right: 1px solid rgba(255,255,255,.06); box-shadow: 4px 0 16px rgba(0,0,0,.3); display: flex; flex-direction: column; overflow-y: auto; transition: transform .3s ease; }
@@ -53,32 +50,32 @@
     .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 190; }
     .sidebar-overlay.active { display: block; }
 
-    /* ═══ MAIN CONTAINER ═══ */
+    /* ═══ MAIN ═══ */
     .main { margin-left: 220px; margin-top: 70px; padding: 28px 24px; flex: 1; }
 
     /* ═══ PAGE HEADER ═══ */
     .pg-hd { margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
-    .pg-hd h2 { font-family: 'Merriweather', serif; font-size: 1.25rem; font-weight: 700; color: var(--navy); }
-    .pg-hd p { font-size: .8rem; color: var(--muted); margin-top: 4px; }
+    .pg-hd h2 { font-family: 'Merriweather', serif; font-size: 1.2rem; font-weight: 700; color: var(--navy); }
+    .pg-hd p { font-size: .78rem; color: var(--muted); margin-top: 3px; }
 
     /* ═══ CARDS ═══ */
     .card { background: var(--white); border-radius: var(--r-lg); border: 1px solid var(--border); box-shadow: var(--shadow-sm); margin-bottom: 20px; overflow: hidden; }
-    .card-head { padding: 14px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; background: #fafcff; }
+    .card-head { padding: 15px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
     .card-head h3 { font-family: 'Merriweather', serif; font-size: .92rem; font-weight: 700; color: var(--navy); }
-    .card-head .meta { font-size: .74rem; color: var(--muted); }
+    .card-head .meta { font-size: .72rem; color: var(--muted); }
     .card-body { padding: 20px; }
 
-    /* ═══ FORM GRIDS & CONTROLS ═══ */
+    /* ═══ FORMS ═══ */
     .fg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
     .fg { display: flex; flex-direction: column; gap: 5px; }
-    .fg label { font-size: .75rem; font-weight: 600; color: var(--navy); }
-    .fg input, .fg select, .fg textarea { padding: 8px 11px; border: 1.5px solid var(--border2); border-radius: var(--r); font-size: .83rem; font-family: inherit; background: #fafcff; color: var(--txt); transition: border .15s, box-shadow .15s; }
-    .fg input:focus, .fg select:focus { outline: none; border-color: var(--navy3); box-shadow: 0 0 0 3px rgba(31,84,144,.1); background: #fff; }
+    .fg label { font-size: .74rem; font-weight: 600; color: var(--navy); }
+    .fg input, .fg select { padding: 8px 11px; border: 1.5px solid var(--border2); border-radius: var(--r); font-size: .83rem; font-family: inherit; background: #fafcff; color: var(--txt); transition: border .15s; }
+    .fg input:focus, .fg select:focus { outline: none; border-color: var(--navy3); box-shadow: 0 0 0 3px rgba(31,84,144,.1); }
 
-    /* ═══ BUTTONS (NO ICONS, CLEAN TEXT) ═══ */
-    .btn { padding: 8px 18px; border-radius: var(--r); border: none; cursor: pointer; font-family: inherit; font-size: .8rem; font-weight: 600; transition: all .14s; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; line-height: 1.4; }
+    /* ═══ BUTTONS ═══ */
+    .btn { padding: 8px 18px; border-radius: var(--r); border: none; cursor: pointer; font-family: inherit; font-size: .8rem; font-weight: 600; transition: all .14s; display: inline-flex; align-items: center; gap: 5px; text-decoration: none; }
     .btn-primary { background: var(--navy); color: #fff; }
-    .btn-primary:hover { background: var(--navy2); box-shadow: 0 3px 10px rgba(13,43,69,.25); }
+    .btn-primary:hover { background: var(--navy2); }
     .btn-gold { background: var(--gold); color: #fff; }
     .btn-gold:hover { background: var(--gold2); }
     .btn-success { background: var(--green); color: #fff; }
@@ -87,967 +84,797 @@
     .btn-danger:hover { background: #991b1b; }
     .btn-outline { background: transparent; border: 1.5px solid var(--navy); color: var(--navy); }
     .btn-outline:hover { background: var(--navy); color: #fff; }
-    .btn-outline-danger { background: transparent; border: 1.5px solid var(--red); color: var(--red); }
-    .btn-outline-danger:hover { background: var(--red); color: #fff; }
     .btn-sm { padding: 5px 12px; font-size: .74rem; }
-    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; align-items: center; }
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
 
-    /* ═══ ALERTS & STATUS BOXES (CLEAN TEXT) ═══ */
-    .alert-box { padding: 10px 14px; border-radius: var(--r); font-size: .78rem; margin-top: 12px; display: none; line-height: 1.5; }
-    .alert-info { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; }
-    .alert-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
-    .alert-danger { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
-    .alert-warning { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
-
-    /* ═══ ROUTINE PREVIEW TABLE ═══ */
-    .preview-tbl-wrap { overflow-x: auto; margin-top: 12px; border: 1px solid var(--border2); border-radius: var(--r); }
-    .data-tbl { width: 100%; border-collapse: collapse; font-size: .78rem; background: #fff; }
-    .data-tbl thead tr { background: var(--navy); color: #fff; }
-    .data-tbl th { padding: 8px 12px; text-align: left; font-weight: 600; font-size: .73rem; white-space: nowrap; border-right: 1px solid rgba(255,255,255,.1); }
-    .data-tbl td { padding: 7px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; color: var(--txt2); }
+    /* ═══ TABLE (management UI) ═══ */
+    .data-tbl { width: 100%; border-collapse: collapse; font-size: .79rem; }
+    .data-tbl thead tr { background: var(--navy); }
+    .data-tbl th { padding: 10px 12px; text-align: left; font-weight: 600; color: #fff; font-size: .73rem; white-space: nowrap; }
+    .data-tbl td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; color: var(--txt2); }
     .data-tbl tbody tr:last-child td { border-bottom: none; }
     .data-tbl tbody tr:hover { background: #f8fafc; }
 
-    /* ═══ ATTENDANCE SHEET PREVIEW ON SCREEN ═══ */
-    .screen-sheets-outer { overflow-x: auto; padding-bottom: 12px; }
-    .sheet-counter-badge { display: inline-block; padding: 4px 10px; background: #e2e8f0; border-radius: 20px; font-size: .74rem; font-weight: 600; color: var(--navy); margin-bottom: 12px; }
+    /* ═══ ALERTS ═══ */
+    .alert { padding: 10px 14px; border-radius: var(--r); font-size: .79rem; margin-bottom: 12px; border: 1px solid; }
+    .alert-ok  { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+    .alert-err { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
+    .alert-info { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
 
-    /* ══════════════════════════════════════════════════════════════
-       ATTENDANCE SHEET FORMAT (EXACT MATCH TO REFERENCE SCREENSHOT)
-       Landscape A4 Layout: 297mm width x 210mm height
-       Usable Printable area: 277mm x 194mm
-       ══════════════════════════════════════════════════════════════ */
+    /* ═══ ROUTINE ITEMS ═══ */
+    .routine-item { background: var(--slate); border: 1.5px solid var(--border); border-radius: var(--r-md); padding: 14px 16px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; transition: border-color .15s; }
+    .routine-item:hover { border-color: var(--border2); }
+    .routine-item.active-routine { border-color: var(--gold2); background: #fffbf0; }
+    .routine-item-info { flex: 1; min-width: 0; }
+    .routine-item-name { font-weight: 700; font-size: .88rem; color: var(--navy); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .routine-item-meta { font-size: .74rem; color: var(--muted); margin-top: 3px; }
+    .active-badge { font-size: .68rem; background: var(--gold3); color: var(--navy); padding: 2px 8px; border-radius: 20px; font-weight: 700; white-space: nowrap; }
+
+    /* ═══ STEP BADGE ═══ */
+    .step-badge { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: var(--navy); color: #fff; font-size: .72rem; font-weight: 700; flex-shrink: 0; }
+    .card-head-left { display: flex; align-items: center; gap: 10px; }
+
+    /* ═══ EMPTY STATE ═══ */
+    .empty-state { text-align: center; padding: 32px 20px; color: var(--muted); }
+    .empty-state p { font-size: .82rem; line-height: 1.6; }
+
+    /* ═══ SHEET CONTROLS ═══ */
+    .sheet-controls { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; padding: 14px 20px; background: var(--white); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); }
+
+    /* ═══════════════════════════════════════════════════
+       ATTENDANCE SHEET PRINT LAYOUT (Landscape A4)
+    ═══════════════════════════════════════════════════ */
+    #sheet-output { display: none; margin-top: 20px; }
+
     .att-sheet-page {
-      background: #fff;
-      color: #000;
       width: 277mm;
-      min-height: 194mm;
-      margin: 0 auto 30px auto;
-      padding: 6mm 8mm;
-      box-shadow: var(--shadow);
-      border: 1px solid #888;
-      box-sizing: border-box;
-      display: flex;
-      flex-direction: column;
-      justify-content: flex-start;
-      font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
-    }
-
-    /* SHEET HEADER */
-    .att-hdr {
+      min-height: 185mm;
+      background: #fff;
+      margin: 0 auto 24px;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid #bbb;
+      font-family: 'Times New Roman', Times, serif;
+      font-size: 10pt;
+      color: #000;
+      padding: 7mm 9mm;
       position: relative;
-      margin-bottom: 8px;
-      min-height: 78px;
+      page-break-after: always;
+      break-after: page;
     }
+    .att-sheet-page:last-child { page-break-after: avoid; break-after: avoid; }
 
-    .att-hdr-center {
-      text-align: center;
-      width: 100%;
-      padding: 0 160px; /* Leave room for right boxes */
-      box-sizing: border-box;
+    /* Header */
+    .att-hdr-wrap {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: start;
+      margin-bottom: 5px;
     }
-
-    .att-hdr-college {
-      font-size: 14pt;
-      font-weight: 700;
-      color: #000;
-      margin-bottom: 2px;
-      line-height: 1.25;
-    }
-
-    .att-hdr-class {
-      font-size: 11pt;
-      font-weight: 600;
-      color: #000;
-      margin-bottom: 2px;
-      line-height: 1.2;
-    }
-
-    .att-hdr-exam {
-      font-size: 11pt;
-      font-weight: 600;
-      color: #000;
-      margin-bottom: 2px;
-      line-height: 1.2;
-    }
-
-    .att-hdr-title {
-      font-size: 11pt;
-      font-weight: 400;
-      color: #000;
-      margin-top: 2px;
-      line-height: 1.2;
-    }
-
-    /* RIGHT SIDE BOXES */
-    .att-hdr-right-boxes {
-      position: absolute;
-      right: 0;
-      top: 0;
+    .att-hdr-center { text-align: center; }
+    .att-hdr-center .att-college { font-size: 14pt; font-weight: 700; margin-bottom: 2px; }
+    .att-hdr-center .att-class   { font-size: 12pt; font-weight: 600; margin-bottom: 2px; }
+    .att-hdr-center .att-exam    { font-size: 12pt; font-weight: 600; margin-bottom: 2px; }
+    .att-hdr-center .att-title   { font-size: 12pt; font-weight: 600; margin-bottom: 4px; }
+    .att-hdr-right {
       display: flex;
       flex-direction: column;
       gap: 6px;
-      width: 150px;
+      min-width: 140px;
     }
-
-    .att-box {
+    .att-info-box {
       border: 1.5px solid #000;
-      padding: 4px 6px;
+      padding: 6px 10px;
       text-align: center;
-      font-size: 10pt;
+      font-size: 9.5pt;
       font-weight: 600;
-      color: #000;
-      background: #fff;
+      min-height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       line-height: 1.2;
+      background: #fff;
     }
 
-    /* SHEET TABLE */
+    /* Attendance table */
     .att-table {
       width: 100%;
       border-collapse: collapse;
-      table-layout: fixed;
-      font-size: 9pt;
-      color: #000;
+      font-size: 9.5pt;
+      margin-top: 6px;
     }
-
     .att-table th, .att-table td {
-      border: 1px solid #000;
-      padding: 3px 4px;
+      border: 1.5px solid #000;
+      padding: 0;
       vertical-align: middle;
-      box-sizing: border-box;
     }
-
-    .att-table thead tr:first-child th {
+    /* Header row */
+    .att-table thead th {
       text-align: center;
       font-weight: 700;
       background: #fff;
-      color: #000;
-      height: 22px;
-      font-size: 9pt;
+      line-height: 1.25;
+      padding: 5px 4px;
     }
+    .att-table thead th.th-roll  { width: 44px; }
+    .att-table thead th.th-name  { width: 140px; }
+    .att-table thead th.th-photo { width: 48px; }
+    .att-table thead th.th-sub   { min-width: 68px; font-size: 9pt; }
+    /* Data rows */
+    .att-table tbody td.td-roll  { text-align: center; font-weight: 700; padding: 4px 4px; }
+    .att-table tbody td.td-name  { padding: 4px 8px; text-align: center; }
+    .att-table tbody td.td-photo { text-align: center; padding: 2px; vertical-align: middle; }
+    .att-table tbody td.td-photo img { width: 40px; height: 48px; object-fit: cover; display: block; margin: auto; border: 1px solid #ddd; }
+    .att-table tbody td.td-photo .no-ph { width: 40px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 6pt; color: #bbb; border: 1px dashed #ddd; margin: auto; }
+    .att-table tbody td.td-sig  { height: 46px; } /* blank signature box */
+    /* Footer */
+    .att-table tfoot td { border-top: 1.5px solid #000; padding: 3px 6px; font-size: 7.5pt; text-align: right; }
 
-    .att-table thead tr:nth-child(2) th {
-      text-align: center;
-      font-weight: 600;
-      background: #fff;
-      color: #000;
-      height: 22px;
-      font-size: 8.5pt;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .att-table tbody td {
-      height: 24px;
-      background: #fff;
-    }
-
-    .att-col-roll {
-      width: 50px;
-      text-align: center;
-      font-weight: 600;
-    }
-
-    .att-col-name {
-      width: 170px;
-      text-align: left;
-      padding-left: 8px !important;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .att-col-sig {
-      text-align: center;
-      /* Blank space for student signature */
-    }
-
-    /* Responsive adjustments */
-    @media (max-width: 900px) {
-      .site-header { transform: translateX(-100%); }
-      .site-header.open { transform: translateX(0); }
-      .main { margin-left: 0; padding: 18px 14px; }
+    /* ═══ RESPONSIVE ═══ */
+    @media (max-width: 768px) {
       .hdr-hamburger { display: flex; }
-      .top-nav-logo-text p { display: none; }
-    }
-
-    @media (max-width: 600px) {
-      .top-nav-bar { padding: 0 12px; }
-      .top-nav-logo-text h1 { font-size: .75rem; }
+      .top-nav-logo-text { display: none; }
+      .top-nav-logo { gap: 8px; }
+      .top-nav-logo-img { width: 40px; height: 40px; }
+      .top-nav-admin-info { display: none; }
+      .top-nav-admin { display: flex; align-items: center; gap: 12px; }
+      .logout-btn { padding: 6px 12px; font-size: 0.72rem; }
+      .site-header { width: 220px; transform: translateX(-100%); top: 70px; height: calc(100vh - 70px); position: fixed; z-index: 200; }
+      .site-header.active { transform: translateX(0); }
+      .nav-strip { position: static; transform: none; width: 100%; height: 100%; display: flex; flex-direction: column; }
+      .main { margin-left: 0; padding: 14px 10px; }
       .fg-grid { grid-template-columns: 1fr; }
-      .btn { width: 100%; }
-      .btn-row { flex-direction: column; }
+      .att-sheet-page { width: 100%; }
     }
+    @media (min-width: 1280px) { .main { padding: 32px 40px; } }
 
-    /* ══════════════════════════════════════════════════════════════
-       PRINT STYLES: STRICT A4 LANDSCAPE, FIT 20 ROWS PER PAGE
-       ══════════════════════════════════════════════════════════════ */
+    /* ═══ PRINT ═══ */
     @media print {
+      .no-print { display: none !important; }
+      body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
+      .main { padding: 0 !important; margin: 0 !important; }
+      .main > .pg-hd,
+      .main > .card,
+      #sheet-controls-wrap { display: none !important; }
+      #sheet-output { display: block !important; margin: 0 !important; }
+      .att-sheet-page {
+        box-shadow: none !important;
+        border: none !important;
+        margin: 0 !important;
+        width: 100% !important;
+        min-height: unset !important;
+        padding: 6mm 8mm !important;
+      }
       @page {
         size: A4 landscape;
-        margin: 6mm 8mm;
+        margin: 0;
       }
-
-      html, body {
-        background: #fff !important;
-        color: #000 !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        display: block !important;
-      }
-
-      /* Hide all website chrome, menus, cards, buttons */
-      .top-nav-bar, .site-header, .sidebar-overlay, .no-print, .card-control-section, .pg-hd {
-        display: none !important;
-      }
-
-      .main {
-        margin: 0 !important;
-        padding: 0 !important;
-      }
-
-      #attendance-sheet-print-container {
-        display: block !important;
-        margin: 0 !important;
-        padding: 0 !important;
-      }
-
-      .att-sheet-page {
-        width: 100% !important;
-        max-width: 100% !important;
-        min-height: 194mm !important;
-        height: 194mm !important;
-        margin: 0 !important;
-        padding: 4mm 6mm !important;
-        border: none !important;
-        box-shadow: none !important;
-        page-break-after: always !important;
-        break-after: page !important;
-        page-break-inside: avoid !important;
-        box-sizing: border-box !important;
-      }
-
-      .att-sheet-page:last-child {
-        page-break-after: auto !important;
-        break-after: auto !important;
-      }
-
-      .att-table {
-        border-collapse: collapse !important;
-        width: 100% !important;
-      }
-
-      .att-table th, .att-table td {
-        border: 1px solid #000 !important;
+      * {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
-      }
-
-      .att-table tbody td {
-        height: 24.5px !important;
+        color-adjust: exact !important;
       }
     }
   </style>
+
+  <!-- PAGE TRANSITION LOADER -->
+  <style>
+    .page-loader{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.72);backdrop-filter:blur(2px);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .24s ease,visibility .24s ease;z-index:9999;}
+    .page-loader.visible{opacity:1;visibility:visible;pointer-events:auto;}
+    .page-loader-inner{display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px 20px;background:rgba(255,255,255,.92);border:1px solid rgba(15,23,42,.1);box-shadow:0 12px 32px rgba(15,23,42,.12);}
+    .page-loader-dots{display:flex;gap:8px;}
+    .page-loader-dot{width:12px;height:12px;background:var(--navy);animation:page-loader-pulse 1s ease-in-out infinite both;}
+    .page-loader-dot:nth-child(2){animation-delay:.16s;}
+    .page-loader-dot:nth-child(3){animation-delay:.32s;}
+    @keyframes page-loader-pulse{0%,100%{transform:scale(1);opacity:.4;}50%{transform:scale(1.45);opacity:1;}}
+    .page-loader-text{font-size:.92rem;color:var(--navy);font-weight:700;letter-spacing:.02em;}
+  </style>
 </head>
-
 <body>
+  <div id="page-loader" class="page-loader" aria-hidden="true">
+    <div class="page-loader-inner">
+      <div class="page-loader-dots">
+        <span class="page-loader-dot"></span>
+        <span class="page-loader-dot"></span>
+        <span class="page-loader-dot"></span>
+      </div>
+      <div class="page-loader-text">Loading&hellip;</div>
+    </div>
+  </div>
 
-  <!-- ═══ TOP NAVIGATION BAR ═══ -->
-  <div class="top-nav-bar">
+  <!-- TOP NAV -->
+  <div class="top-nav-bar no-print">
     <div class="top-nav-logo">
-      <button class="hdr-hamburger" id="hamburger-btn" onclick="toggleSidebar()" aria-label="Toggle navigation">☰</button>
       <div class="top-nav-logo-img">
         <img src="https://www.muamc.edu.bd/wp-content/uploads/2025/01/logo-muam-scaled.jpeg" alt="Logo">
       </div>
       <div class="top-nav-logo-text">
         <h1>Moinuddin Adarsha Mohila College</h1>
-        <p>Sylhet, Bangladesh — Exam Attendance Management</p>
+        <p>Student Database System</p>
       </div>
     </div>
     <div class="top-nav-admin">
+      <div class="top-nav-admin-info">
+        <div class="top-nav-avatar" id="nav-avatar">A</div>
+        <div>
+          <div class="top-nav-name" id="nav-name">Admin</div>
+          <div class="top-nav-role" id="nav-role">System Admin</div>
+        </div>
+      </div>
+      <button class="hdr-hamburger" id="hdr-hamburger" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
       <button class="logout-btn" onclick="doLogout()">Logout</button>
     </div>
   </div>
 
-  <!-- ═══ SIDEBAR NAVIGATION (ICONS CONFINED ONLY HERE) ═══ -->
-  <header class="site-header" id="site-header">
+  <!-- SIDEBAR -->
+  <header class="site-header no-print" id="site-header">
     <nav class="nav-strip" id="nav-strip">
       <a class="nt" href="/"><i class="fas fa-home nav-icon"></i> Dashboard</a>
       <a class="nt" href="/student-list.html"><i class="fas fa-users nav-icon"></i> Student Management</a>
-      <a class="nt" href="/admission-admin.html"><i class="fas fa-user-plus nav-icon"></i> Admission</a>
+      <a class="nt" href="/admission-admin.html"><i class="fas fa-file-alt nav-icon"></i> Admission</a>
       <a class="nt" href="/marks-entry.html"><i class="fas fa-edit nav-icon"></i> Mark Entry</a>
       <a class="nt" href="/Teachers.html"><i class="fas fa-chalkboard-teacher nav-icon"></i> Teachers</a>
       <a class="nt" href="/Result-card.html"><i class="fas fa-file-invoice nav-icon"></i> Result Card</a>
       <a class="nt" href="/Admit-card.html"><i class="fas fa-id-card nav-icon"></i> Admit Card</a>
       <a class="nt" href="/bulk-photo.html"><i class="fas fa-images nav-icon"></i> Bulk Photo Upload</a>
+      <a class="nt active" href="/exam_attt_sheet.html"><i class="fas fa-clipboard-list nav-icon"></i> Exam Attendance</a>
       <a class="nt" href="/analytics.html" style="border-top:1px solid rgba(255,255,255,.08);margin-top:8px;padding-top:16px;"><i class="fas fa-chart-line nav-icon"></i> Analytics</a>
       <a class="nt" href="/result_analytics.html"><i class="fas fa-chart-bar nav-icon"></i> Result Analytics</a>
       <a class="nt" href="/group-results.html"><i class="fas fa-table nav-icon"></i> Group-wise Results</a>
       <a class="nt" href="/seat-plan.html"><i class="fas fa-th nav-icon"></i> Seat Plan</a>
-      <a class="nt active" href="/exam_attt_sheet.html"><i class="fas fa-clipboard-check nav-icon"></i> Exam Attendance Sheet</a>
     </nav>
   </header>
 
-  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+  <div class="sidebar-overlay no-print" id="sidebar-overlay" onclick="closeSidebar()"></div>
 
-  <!-- ═══ MAIN CONTENT AREA (STRICT ZERO-ICON POLICY IN PAGE BODY) ═══ -->
-  <main class="main" id="main-content">
-
+  <main class="main">
     <div class="pg-hd no-print">
       <h2>Exam Attendance Sheet</h2>
-      <p>Generate routine-based landscape attendance signature sheets. Exactly 20 students per sheet fitted for A4 landscape printing.</p>
+      <p>Upload exam routine and generate printable attendance sheets with student photo and signature columns (landscape A4, 20 students per sheet)</p>
     </div>
 
-    <!-- ═══ STEP 1: CLASS, GROUP & SESSION SELECTION ═══ -->
-    <div class="card card-control-section no-print">
+    <!-- ─── STEP 1: Class / Group / Session ─── -->
+    <div class="card no-print">
       <div class="card-head">
-        <h3>Class & Group Selection</h3>
-        <span class="meta">Select class, group, and session to unlock bulk routine and roll configuration</span>
+        <div class="card-head-left">
+          <span class="step-badge">1</span>
+          <h3>Select Class, Group &amp; Session</h3>
+        </div>
       </div>
       <div class="card-body">
         <div class="fg-grid">
           <div class="fg">
-            <label for="sel-class">Class</label>
-            <select id="sel-class" onchange="onClassOrGroupChange()">
-              <option value="">-- Select Class --</option>
+            <label>Class *</label>
+            <select id="sel-class" onchange="onFilterChange()">
+              <option value="">&mdash; Select Class &mdash;</option>
               <option value="Class-XI">Class XI</option>
               <option value="Class-XII">Class XII</option>
             </select>
           </div>
           <div class="fg">
-            <label for="sel-group">Group</label>
-            <select id="sel-group" onchange="onClassOrGroupChange()">
-              <option value="">-- Select Group --</option>
+            <label>Group *</label>
+            <select id="sel-group" disabled onchange="onFilterChange()">
+              <option value="">&mdash; Select Group &mdash;</option>
               <option value="Science">Science</option>
               <option value="Humanities">Humanities</option>
               <option value="Business">Business Studies</option>
             </select>
           </div>
           <div class="fg">
-            <label for="sel-session">Session</label>
-            <select id="sel-session" onchange="onClassOrGroupChange()">
-              <option value="">-- Select Session --</option>
-              <option value="2025-2026">2025-2026</option>
+            <label>Session *</label>
+            <select id="sel-session" onchange="onFilterChange()">
+              <option value="">&mdash; Select Session &mdash;</option>
               <option value="2024-2025">2024-2025</option>
-              <option value="2023-2024">2023-2024</option>
-              <option value="2022-2023">2022-2023</option>
+              <option value="2025-2026">2025-2026</option>
+              <option value="2026-2027">2026-2027</option>
+              <option value="2027-2028">2027-2028</option>
+              <option value="2028-2029">2028-2029</option>
+              <option value="2029-2030">2029-2030</option>
             </select>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- ═══ STEP 2: BULK ROUTINE IMPORT & DATABASE STORAGE (CONDITIONALLY DISPLAYED) ═══ -->
-    <div class="card card-control-section no-print" id="card-routine-section" style="display:none;">
+    <!-- ─── STEP 2: Routine Management ─── -->
+    <div class="card no-print" id="routine-card" style="display:none;">
       <div class="card-head">
-        <h3>Examination Routine (Bulk Upload & Storage)</h3>
-        <span class="meta" id="routine-card-meta">Upload or manage examination routine saved in database</span>
+        <div class="card-head-left">
+          <span class="step-badge">2</span>
+          <h3>Exam Routine Management</h3>
+        </div>
+        <span class="meta" id="routine-card-meta"></span>
       </div>
       <div class="card-body">
-        <p style="font-size:.8rem;color:var(--txt2);margin-bottom:12px;line-height:1.5;">
-          Upload an Excel routine file (.xlsx, .xls) for this selected group and class. 
-          The routine will be saved to the database. Excel columns should be: <strong>Column 1 = Date/Day, Column 2 = Subject Name, Column 3 = Time</strong>.
-        </p>
+        <div id="routine-msg"></div>
 
-        <div class="btn-row" style="margin-top:0;margin-bottom:12px;">
-          <label class="btn btn-primary" style="cursor:pointer;">
-            Upload Routine (.xlsx)
-            <input type="file" id="routine-file-input" accept=".xlsx,.xls" style="display:none;" onchange="handleRoutineFileUpload(event)">
-          </label>
-          <button class="btn btn-success" id="btn-save-routine" onclick="saveCurrentRoutineToDb()" style="display:none;">
-            Save Routine to Database
-          </button>
-          <button class="btn btn-outline-danger" id="btn-delete-routine" onclick="deleteRoutineFromDb()" style="display:none;">
-            Delete Routine from Database
-          </button>
-          <button class="btn btn-outline" id="btn-reload-routine" onclick="loadRoutineFromDb()">
-            Reload Saved Routine
-          </button>
-        </div>
+        <!-- Upload new routine -->
+        <div style="padding-bottom:20px;border-bottom:1px solid var(--border);margin-bottom:20px;">
+          <p style="font-size:.82rem;color:var(--txt2);margin-bottom:12px;">
+            Upload an Excel file with: <strong>Column A</strong> = Date &amp; Day &nbsp;|&nbsp; <strong>Column B</strong> = Subject Name &nbsp;|&nbsp; <strong>Column C</strong> = Time. Row&nbsp;1 is the header (skipped automatically).
+          </p>
+          <div style="display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;">
+            <div class="fg" style="flex:1;min-width:200px;">
+              <label>Exam Name *</label>
+              <input type="text" id="routine-exam-name" placeholder="e.g. Pre-test Examination-2026">
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <label class="btn btn-outline btn-sm" style="cursor:pointer;">
+                Choose Excel File (.xlsx)
+                <input type="file" id="routine-file" accept=".xlsx,.xls" style="display:none;" onchange="handleRoutineFile(event)">
+              </label>
+              <span id="routine-file-name" style="font-size:.74rem;color:var(--muted);"></span>
+            </div>
+          </div>
 
-        <div id="routine-alert" class="alert-box"></div>
-
-        <!-- Routine preview table -->
-        <div id="routine-preview-wrap" style="display:none;margin-top:14px;">
-          <div style="font-size:.8rem;font-weight:700;color:var(--navy);margin-bottom:6px;">Current Group Routine:</div>
-          <div class="preview-tbl-wrap">
-            <table class="data-tbl" id="routine-preview-table">
-              <thead>
-                <tr>
-                  <th style="width:40px;">No.</th>
-                  <th>Date / Day</th>
-                  <th>Subject</th>
-                  <th>Time</th>
-                  <th style="width:70px;">Action</th>
-                </tr>
-              </thead>
-              <tbody id="routine-preview-tbody"></tbody>
-            </table>
+          <div id="routine-preview-wrap" style="display:none;margin-top:14px;">
+            <div style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r);">
+              <table class="data-tbl">
+                <thead><tr><th>#</th><th>Date &amp; Day</th><th>Subject</th><th>Time</th></tr></thead>
+                <tbody id="routine-preview-body"></tbody>
+              </table>
+            </div>
+            <div class="btn-row">
+              <button class="btn btn-success" onclick="saveRoutine()">Save to Database</button>
+              <button class="btn btn-outline" onclick="clearRoutineFile()">Clear</button>
+            </div>
           </div>
         </div>
 
+        <!-- Saved routines list -->
+        <div>
+          <h4 style="font-size:.82rem;font-weight:700;color:var(--navy);margin-bottom:12px;">Saved Routines for this Class / Group / Session</h4>
+          <div id="saved-routines-list">
+            <div class="empty-state"><p>No routines saved yet. Upload one above.</p></div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- ═══ STEP 3: EXAM NAME, HALL NUMBER & ROLL RANGE ═══ -->
-    <div class="card card-control-section no-print" id="card-hall-section" style="display:none;">
+    <!-- ─── STEP 3: Generate Sheet ─── -->
+    <div class="card no-print" id="gen-card" style="display:none;">
       <div class="card-head">
-        <h3>Exam & Hall Configuration</h3>
-        <span class="meta">Specify exam title, examination hall, and roll range for this hall</span>
+        <div class="card-head-left">
+          <span class="step-badge">3</span>
+          <h3>Generate Attendance Sheet</h3>
+        </div>
+        <span class="meta" id="gen-card-meta"></span>
       </div>
       <div class="card-body">
+        <div id="gen-msg"></div>
         <div class="fg-grid">
           <div class="fg">
-            <label for="cfg-exam-name">Exam Name</label>
-            <input type="text" id="cfg-exam-name" value="Pre-test Examination-2026" placeholder="e.g. Pre-test Examination-2026">
+            <label>Exam Name *</label>
+            <input type="text" id="gen-exam-name" placeholder="e.g. Pre-test Examination-2026">
           </div>
           <div class="fg">
-            <label for="cfg-hall-no">Hall Number</label>
-            <input type="text" id="cfg-hall-no" value="Hall No. 01" placeholder="e.g. Hall No. 01">
+            <label>Hall Number *</label>
+            <input type="text" id="gen-hall" placeholder="e.g. 01">
           </div>
           <div class="fg">
-            <label for="cfg-roll-from">Roll From</label>
-            <input type="number" id="cfg-roll-from" placeholder="Start Roll (e.g. 101)" min="1">
+            <label>Starting Roll No. (in this hall)</label>
+            <input type="number" id="gen-roll-start" placeholder="Leave blank for all" min="1">
           </div>
           <div class="fg">
-            <label for="cfg-roll-to">Roll To</label>
-            <input type="number" id="cfg-roll-to" placeholder="End Roll (e.g. 160)" min="1">
+            <label>Ending Roll No. (in this hall)</label>
+            <input type="number" id="gen-roll-end" placeholder="Leave blank for all" min="1">
           </div>
         </div>
-
         <div class="btn-row">
-          <button class="btn btn-primary" onclick="generateAttendanceSheets()">Generate Attendance Sheet</button>
-          <button class="btn btn-success" id="btn-print-top" onclick="printAttendanceSheets()" style="display:none;">Print Attendance Sheet (A4 Landscape)</button>
-          <button class="btn btn-outline" onclick="resetForm()">Reset</button>
+          <button class="btn btn-primary" onclick="generateSheet()">Generate Sheet</button>
         </div>
-
-        <div id="config-alert" class="alert-box"></div>
       </div>
     </div>
 
-    <!-- ═══ STEP 4: GENERATED SHEETS OUTPUT (SCREEN & PRINT) ═══ -->
-    <div class="card no-print" id="card-sheets-output" style="display:none;">
-      <div class="card-head">
-        <h3>Attendance Sheet Preview</h3>
-        <div>
-          <button class="btn btn-success btn-sm" onclick="printAttendanceSheets()">Print Attendance Sheet</button>
-        </div>
-      </div>
-      <div class="card-body">
-        <div id="output-meta-badge" class="sheet-counter-badge"></div>
-        <p style="font-size:.78rem;color:var(--muted);margin-bottom:16px;">
-          Preview below represents the exact printed sheets. Click <strong>Print Attendance Sheet</strong> or press <strong>Ctrl+P</strong> to print in A4 Landscape format (20 students per sheet).
-        </p>
-
-        <!-- Scrollable container for screen preview so landscape layout never breaks mobile viewports -->
-        <div class="screen-sheets-outer" id="screen-sheets-container"></div>
+    <!-- Sheet controls -->
+    <div id="sheet-controls-wrap" class="no-print" style="display:none;">
+      <div class="sheet-controls">
+        <button class="btn btn-success" onclick="window.print()">Print</button>
+        <button class="btn btn-outline" onclick="clearSheet()">Clear Sheet</button>
+        <span id="sheet-summary" style="font-size:.8rem;color:var(--muted);font-weight:600;"></span>
       </div>
     </div>
-
-    <!-- Container used for printing (clean DOM) -->
-    <div id="attendance-sheet-print-container" style="display:none;"></div>
-
   </main>
 
+  <!-- SHEET OUTPUT -->
+  <div id="sheet-output"></div>
+
   <script>
-    // ══════════════════════════════════════════════════════════════
-    // GLOBAL STATE & DATA
-    // ══════════════════════════════════════════════════════════════
-    const $ = id => document.getElementById(id);
+    // ── API wrapper ───────────────────────────────────────────────────────────
+    (function () {
+      const base = window.API_BASE !== undefined ? window.API_BASE : window.location.origin;
+      window.API_BASE = base;
+      const orig = window.fetch;
+      window.fetch = function () {
+        const args = Array.prototype.slice.call(arguments);
+        if (typeof args[0] === 'string' && args[0].startsWith('/api')) args[0] = base + args[0];
+        args[1] = Object.assign({ credentials: 'include' }, args[1] || {});
+        return orig.apply(window, args);
+      };
+    })();
 
-    let currentRoutine = [];       // Array of { date, day, subject, time }
-    let matchedStudents = [];      // Array of student objects
-    let collegeName = 'Moinuddin Adarsha Mohila College, Sylhet';
-
-    // ── MOBILE SIDEBAR TOGGLE ──
+    // ── Sidebar ───────────────────────────────────────────────────────────────
     function toggleSidebar() {
-      const sb = $('site-header');
-      const ov = $('sidebar-overlay');
-      if (sb) sb.classList.toggle('open');
-      if (ov) ov.classList.toggle('active');
+      document.getElementById('site-header').classList.toggle('active');
+      document.getElementById('sidebar-overlay').classList.toggle('active');
     }
-
     function closeSidebar() {
-      const sb = $('site-header');
-      const ov = $('sidebar-overlay');
-      if (sb) sb.classList.remove('open');
-      if (ov) ov.classList.remove('active');
+      document.getElementById('site-header').classList.remove('active');
+      document.getElementById('sidebar-overlay').classList.remove('active');
     }
 
-    // ── AUTH & LOGOUT ──
-    async function doLogout() {
-      try {
-        await fetch('/api/logout', { method: 'POST' });
-      } catch (e) {}
-      window.location.href = '/login';
+    // ── Utilities ─────────────────────────────────────────────────────────────
+    function $(id) { return document.getElementById(id); }
+    function $v(id) { return ($(id) || {}).value || ''; }
+    function esc(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
-
-    // ── ALERT HELPER (PURE TEXT, NO ICONS) ──
-    function showAlert(elemId, type, message) {
-      const el = $(elemId);
+    function showMsg(id, html, type) {
+      const el = $(id);
       if (!el) return;
-      el.className = 'alert-box alert-' + type;
-      el.textContent = message;
-      el.style.display = 'block';
+      el.innerHTML = html ? `<div class="alert alert-${type || 'info'}">${html}</div>` : '';
     }
 
-    function hideAlert(elemId) {
-      const el = $(elemId);
-      if (el) el.style.display = 'none';
-    }
+    // ── State ─────────────────────────────────────────────────────────────────
+    let _parsedEntries = [];   // Excel-parsed, not yet saved
+    let _activeRoutine = null; // {id, exam_name, entries:[{date,subject,time}]}
 
-    // ── LOAD COLLEGE SETTINGS & SESSIONS ──
-    async function loadSettings() {
-      try {
-        const res = await fetch('/api/settings');
-        if (res.ok) {
-          const json = await res.json();
-          if (json.ok && json.data) {
-            collegeName = json.data.collegeName || 'Moinuddin Adarsha Mohila College, Sylhet';
-          }
-        }
-      } catch (e) {}
+    // ── Step 1: Filter change ─────────────────────────────────────────────────
+    function onFilterChange() {
+      const cls  = $v('sel-class');
+      const grp  = $v('sel-group');
+      const sess = $v('sel-session');
 
-      // Dynamically populate available sessions from existing students
-      try {
-        const res = await fetch('/api/students');
-        if (res.ok) {
-          const json = await res.json();
-          if (json.ok && json.data) {
-            const sessions = new Set();
-            json.data.forEach(s => {
-              const val = (s.session || s.year || '').trim();
-              if (val) sessions.add(val);
-            });
-            const selSession = $('sel-session');
-            const currentVal = selSession.value;
-            const existingVals = Array.from(selSession.options).map(o => o.value);
-            sessions.forEach(sess => {
-              if (!existingVals.includes(sess)) {
-                const opt = document.createElement('option');
-                opt.value = sess;
-                opt.textContent = sess;
-                selSession.appendChild(opt);
-              }
-            });
-            if (currentVal) selSession.value = currentVal;
-          }
-        }
-      } catch (e) {}
-    }
+      const grpSel = $('sel-group');
+      grpSel.disabled = !cls;
+      if (!cls) grpSel.value = '';
 
-    // ── STEP 1: CLASS, GROUP, SESSION CHANGE LISTENER ──
-    function onClassOrGroupChange() {
-      const cls = $('sel-class').value;
-      const grp = $('sel-group').value;
-      const session = $('sel-session').value;
+      const complete = !!(cls && grp && sess);
+      $('routine-card').style.display = complete ? '' : 'none';
+      $('gen-card').style.display     = 'none';
+      clearSheet();
+      _activeRoutine  = null;
+      _parsedEntries  = [];
+      showMsg('routine-msg', '', '');
+      showMsg('gen-msg', '', '');
 
-      hideAlert('routine-alert');
-      hideAlert('config-alert');
-
-      if (cls && grp && session) {
-        $('card-routine-section').style.display = 'block';
-        $('card-hall-section').style.display = 'block';
-        $('routine-card-meta').textContent = `${grp} | ${cls} | Session: ${session}`;
-        
-        // Auto-load any existing routine saved in the database for this class, group, and session
-        loadRoutineFromDb();
-      } else {
-        $('card-routine-section').style.display = 'none';
-        $('card-hall-section').style.display = 'none';
-        $('card-sheets-output').style.display = 'none';
+      if (complete) {
+        $('routine-card-meta').textContent = `${cls} \u2014 ${grp} \u2014 ${sess}`;
+        loadSavedRoutines();
       }
     }
 
-    // ══════════════════════════════════════════════════════════════
-    // BULK ROUTINE HANDLING (EXCEL UPLOAD & DB STORAGE)
-    // ══════════════════════════════════════════════════════════════
+    // ── Step 2: Load saved routines ───────────────────────────────────────────
+    async function loadSavedRoutines() {
+      const cls  = $v('sel-class');
+      const grp  = $v('sel-group');
+      const sess = $v('sel-session');
+      const list = $('saved-routines-list');
+      list.innerHTML = '<div class="empty-state"><p>Loading&hellip;</p></div>';
+      try {
+        const res = await fetch(`/api/exam-routine?cls=${encodeURIComponent(cls)}&group=${encodeURIComponent(grp)}&session=${encodeURIComponent(sess)}`).then(r => r.json());
+        if (!res.ok || !res.data || !res.data.length) {
+          list.innerHTML = '<div class="empty-state"><p>No routines saved yet for this class / group / session. Upload one above.</p></div>';
+          return;
+        }
+        list.innerHTML = res.data.map(r => {
+          const isActive = _activeRoutine && _activeRoutine.id === r.id;
+          return `<div class="routine-item${isActive ? ' active-routine' : ''}" id="ri-${r.id}">
+            <div class="routine-item-info">
+              <div class="routine-item-name">${esc(r.exam_name)}</div>
+              <div class="routine-item-meta">${r.entries.length} subject(s) &nbsp;&bull;&nbsp; Saved: ${esc(r.uploaded_at)}</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              ${isActive ? '<span class="active-badge">Active</span>' : ''}
+              <button class="btn btn-primary btn-sm" onclick="loadRoutine(${r.id})">Load</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteRoutine(${r.id})">Delete</button>
+            </div>
+          </div>`;
+        }).join('');
+      } catch (e) {
+        list.innerHTML = '<div class="empty-state"><p>Failed to load saved routines.</p></div>';
+      }
+    }
 
-    function handleRoutineFileUpload(event) {
+    // ── Step 2: Parse Excel file ──────────────────────────────────────────────
+    function handleRoutineFile(event) {
       const file = event.target.files[0];
       if (!file) return;
-
+      $('routine-file-name').textContent = file.name;
       const reader = new FileReader();
-      reader.onload = function(e) {
+      reader.onload = function (e) {
         try {
-          const data = new Uint8Array(e.target.result);
-          const workbook = XLSX.read(data, { type: 'array', cellDates: true });
-          const sheet = workbook.Sheets[workbook.SheetNames[0]];
-          const json = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, dateNF: 'dd/mm/yyyy' });
-
-          const newRoutine = [];
-          for (let i = 1; i < json.length; i++) {
-            const row = json[i];
-            if (!row || (!row[0] && !row[1])) continue;
-
-            const dateDay = String(row[0] || '').trim();
-            const subject = String(row[1] || '').trim();
-            const time = String(row[2] || '').trim();
-
-            if (dateDay || subject) {
-              newRoutine.push({
-                date: dateDay,
-                subject: subject,
-                time: time
-              });
-            }
+          const wb   = XLSX.read(new Uint8Array(e.target.result), { type: 'array', cellDates: true });
+          const sheet = wb.Sheets[wb.SheetNames[0]];
+          const rows  = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, dateNF: 'dd/mm/yyyy' });
+          _parsedEntries = [];
+          for (let i = 1; i < rows.length; i++) {
+            const r = rows[i];
+            if (!r || (!r[0] && !r[1])) continue;
+            _parsedEntries.push({
+              date:    String(r[0] || '').trim(),
+              subject: String(r[1] || '').trim(),
+              time:    String(r[2] || '').trim()
+            });
           }
-
-          if (!newRoutine.length) {
-            showAlert('routine-alert', 'danger', 'No valid routine rows found in the uploaded file.');
+          if (!_parsedEntries.length) {
+            showMsg('routine-msg', 'No data rows found in the Excel file. Make sure row 1 is a header and data starts from row 2.', 'err');
             return;
           }
-
-          currentRoutine = newRoutine;
-          renderRoutinePreview();
-          $('btn-save-routine').style.display = 'inline-flex';
-          showAlert('routine-alert', 'info', `Loaded ${currentRoutine.length} routine items from Excel file. Click "Save Routine to Database" to store them.`);
+          showMsg('routine-msg', '', '');
+          const tbody = $('routine-preview-body');
+          tbody.innerHTML = _parsedEntries.map((e, i) =>
+            `<tr><td>${i+1}</td><td>${esc(e.date)}</td><td>${esc(e.subject)}</td><td>${esc(e.time)}</td></tr>`
+          ).join('');
+          $('routine-preview-wrap').style.display = '';
         } catch (err) {
-          showAlert('routine-alert', 'danger', 'Error reading Excel file: ' + err.message);
+          showMsg('routine-msg', 'Error reading Excel file: ' + err.message, 'err');
         }
       };
       reader.readAsArrayBuffer(file);
     }
 
-    function renderRoutinePreview() {
-      const wrap = $('routine-preview-wrap');
-      const tbody = $('routine-preview-tbody');
-      tbody.innerHTML = '';
-
-      if (!currentRoutine.length) {
-        wrap.style.display = 'none';
-        $('btn-delete-routine').style.display = 'none';
-        $('btn-save-routine').style.display = 'none';
-        return;
-      }
-
-      currentRoutine.forEach((item, idx) => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td style="text-align:center;">${idx + 1}</td>
-          <td>${item.date || '—'}</td>
-          <td style="font-weight:600;">${item.subject || '—'}</td>
-          <td>${item.time || '—'}</td>
-          <td>
-            <button class="btn btn-outline-danger btn-sm" onclick="removeRoutineRow(${idx})">Remove</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-
-      wrap.style.display = 'block';
+    function clearRoutineFile() {
+      $('routine-file').value = '';
+      $('routine-file-name').textContent = '';
+      $('routine-preview-wrap').style.display = 'none';
+      $('routine-preview-body').innerHTML = '';
+      _parsedEntries = [];
+      showMsg('routine-msg', '', '');
     }
 
-    function removeRoutineRow(idx) {
-      currentRoutine.splice(idx, 1);
-      renderRoutinePreview();
-      $('btn-save-routine').style.display = 'inline-flex';
-      showAlert('routine-alert', 'warning', 'Routine row removed locally. Click "Save Routine to Database" to update the database.');
-    }
-
-    // Save routine to backend DB via API
-    async function saveCurrentRoutineToDb() {
-      const cls = $('sel-class').value;
-      const grp = $('sel-group').value;
-      const session = $('sel-session').value;
-      const examName = $('cfg-exam-name').value.trim();
-
-      if (!cls || !grp || !session) {
-        showAlert('routine-alert', 'danger', 'Please select class, group, and session first.');
-        return;
-      }
-
-      if (!currentRoutine.length) {
-        showAlert('routine-alert', 'danger', 'Routine is empty. Please upload an Excel routine file first.');
-        return;
-      }
-
+    // ── Step 2: Save routine to DB ────────────────────────────────────────────
+    async function saveRoutine() {
+      const examName = ($v('routine-exam-name') || '').trim();
+      if (!examName) { showMsg('routine-msg', 'Please enter an Exam Name before saving.', 'err'); return; }
+      if (!_parsedEntries.length) { showMsg('routine-msg', 'Please choose an Excel file first.', 'err'); return; }
+      showMsg('routine-msg', 'Saving&hellip;', 'info');
       try {
-        const res = await fetch('/api/exam-routine/bulk', {
+        const res = await fetch('/api/exam-routine/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            cls: cls,
-            group: grp,
-            session: session,
+            cls:       $v('sel-class'),
+            group:     $v('sel-group'),
+            session:   $v('sel-session'),
             exam_name: examName,
-            routines: currentRoutine
+            entries:   _parsedEntries
           })
-        });
-
-        const data = await res.json();
-        if (data.ok) {
-          showAlert('routine-alert', 'success', `Routine saved to database successfully (${data.count} subjects stored).`);
-          $('btn-save-routine').style.display = 'none';
-          $('btn-delete-routine').style.display = 'inline-flex';
+        }).then(r => r.json());
+        if (res.ok) {
+          showMsg('routine-msg', `Routine "<strong>${esc(examName)}</strong>" saved with ${_parsedEntries.length} subject(s).`, 'ok');
+          clearRoutineFile();
+          $('routine-exam-name').value = '';
+          loadSavedRoutines();
         } else {
-          showAlert('routine-alert', 'danger', 'Failed to save routine: ' + (data.message || 'Server error'));
+          showMsg('routine-msg', res.message || 'Failed to save.', 'err');
         }
-      } catch (err) {
-        showAlert('routine-alert', 'danger', 'Network or server error while saving routine: ' + err.message);
-      }
+      } catch (e) { showMsg('routine-msg', 'Network error: ' + e.message, 'err'); }
     }
 
-    // Load routine from backend DB via API
-    async function loadRoutineFromDb() {
-      const cls = $('sel-class').value;
-      const grp = $('sel-group').value;
-      const session = $('sel-session').value;
-
-      if (!cls || !grp || !session) return;
-
+    // ── Step 2: Load a routine as active ─────────────────────────────────────
+    async function loadRoutine(id) {
       try {
-        const url = `/api/exam-routine?cls=${encodeURIComponent(cls)}&group=${encodeURIComponent(grp)}&session=${encodeURIComponent(session)}`;
-        const res = await fetch(url);
-        const data = await res.json();
-
-        if (data.ok && data.data && data.data.length > 0) {
-          currentRoutine = data.data.map(r => ({
-            id: r.id,
-            date: r.date,
-            day: r.day,
-            subject: r.subject,
-            time: r.time
-          }));
-
-          renderRoutinePreview();
-          $('btn-delete-routine').style.display = 'inline-flex';
-          $('btn-save-routine').style.display = 'none';
-          showAlert('routine-alert', 'success', `Loaded ${currentRoutine.length} saved routine subjects from database for this group.`);
-        } else {
-          currentRoutine = [];
-          renderRoutinePreview();
-          $('btn-delete-routine').style.display = 'none';
-          showAlert('routine-alert', 'info', 'No routine found in database for this group. Please upload an Excel routine file.');
-        }
-      } catch (err) {
-        showAlert('routine-alert', 'danger', 'Could not load routine from database: ' + err.message);
-      }
+        const res = await fetch(`/api/exam-routine?cls=${encodeURIComponent($v('sel-class'))}&group=${encodeURIComponent($v('sel-group'))}&session=${encodeURIComponent($v('sel-session'))}`).then(r => r.json());
+        if (!res.ok) return;
+        const r = (res.data || []).find(x => x.id === id);
+        if (!r) return;
+        _activeRoutine = r;
+        $('gen-exam-name').value    = r.exam_name;
+        $('gen-card-meta').textContent = `${r.entries.length} subject(s) loaded`;
+        $('gen-card').style.display = '';
+        showMsg('routine-msg', `Routine "<strong>${esc(r.exam_name)}</strong>" loaded successfully (${r.entries.length} subjects). Complete Step 3 to generate the sheet.`, 'ok');
+        loadSavedRoutines();
+        $('gen-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (e) { showMsg('routine-msg', 'Error loading routine: ' + e.message, 'err'); }
     }
 
-    // Delete routine from database
-    async function deleteRoutineFromDb() {
-      const cls = $('sel-class').value;
-      const grp = $('sel-group').value;
-      const session = $('sel-session').value;
-
-      if (!confirm(`Are you sure you want to delete the examination routine for ${cls} - ${grp} (${session}) from the database?`)) {
-        return;
-      }
-
+    // ── Step 2: Delete routine ────────────────────────────────────────────────
+    async function deleteRoutine(id) {
+      if (!confirm('Delete this routine permanently? This cannot be undone.')) return;
       try {
-        const url = `/api/exam-routine?cls=${encodeURIComponent(cls)}&group=${encodeURIComponent(grp)}&session=${encodeURIComponent(session)}`;
-        const res = await fetch(url, { method: 'DELETE' });
-        const data = await res.json();
-
-        if (data.ok) {
-          currentRoutine = [];
-          renderRoutinePreview();
-          $('btn-delete-routine').style.display = 'none';
-          $('btn-save-routine').style.display = 'none';
-          $('routine-file-input').value = '';
-          showAlert('routine-alert', 'success', 'Routine deleted from database successfully.');
+        const res = await fetch(`/api/exam-routine/${id}`, { method: 'DELETE' }).then(r => r.json());
+        if (res.ok) {
+          if (_activeRoutine && _activeRoutine.id === id) {
+            _activeRoutine = null;
+            $('gen-card').style.display = 'none';
+            clearSheet();
+          }
+          loadSavedRoutines();
         } else {
-          showAlert('routine-alert', 'danger', 'Failed to delete routine: ' + (data.message || 'Server error'));
+          alert(res.message || 'Failed to delete.');
         }
-      } catch (err) {
-        showAlert('routine-alert', 'danger', 'Error deleting routine: ' + err.message);
-      }
+      } catch (e) { alert('Network error: ' + e.message); }
     }
 
-    // ══════════════════════════════════════════════════════════════
-    // ATTENDANCE SHEET GENERATION (EXACT LANDSCAPE 20-STUDENT PAGES)
-    // ══════════════════════════════════════════════════════════════
-
-    async function generateAttendanceSheets() {
-      const cls = $('sel-class').value;
-      const grp = $('sel-group').value;
-      const session = $('sel-session').value;
-      const examName = $('cfg-exam-name').value.trim() || 'Examination';
-      const hallNo = $('cfg-hall-no').value.trim() || 'Hall No. 01';
-      const rollFrom = $('cfg-roll-from').value.trim();
-      const rollTo = $('cfg-roll-to').value.trim();
-
-      hideAlert('config-alert');
-
-      if (!cls || !grp || !session) {
-        showAlert('config-alert', 'danger', 'Please select class, group, and session.');
+    // ── Step 3: Generate sheet ────────────────────────────────────────────────
+    async function generateSheet() {
+      if (!_activeRoutine) {
+        showMsg('gen-msg', 'No routine is loaded. Please load a routine from Step 2 first.', 'err');
         return;
       }
+      const examName  = ($v('gen-exam-name')    || '').trim() || _activeRoutine.exam_name;
+      const hall      = ($v('gen-hall')         || '').trim();
+      const rollStart = parseInt($v('gen-roll-start')) || 0;
+      const rollEnd   = parseInt($v('gen-roll-end'))   || 0;
 
-      if (!currentRoutine || !currentRoutine.length) {
-        showAlert('config-alert', 'danger', 'Please upload or save an exam routine first.');
-        return;
-      }
+      if (!hall) { showMsg('gen-msg', 'Please enter the Hall Number.', 'err'); return; }
 
-      // Fetch students from backend
+      showMsg('gen-msg', 'Loading students from database&hellip;', 'info');
+
       try {
-        let url = `/api/exam-attendance/students?cls=${encodeURIComponent(cls)}&group=${encodeURIComponent(grp)}&session=${encodeURIComponent(session)}`;
-        if (rollFrom) url += `&roll_from=${encodeURIComponent(rollFrom)}`;
-        if (rollTo) url += `&roll_to=${encodeURIComponent(rollTo)}`;
+        const res = await fetch(
+          `/api/exam-attendance/students?cls=${encodeURIComponent($v('sel-class'))}&group=${encodeURIComponent($v('sel-group'))}&session=${encodeURIComponent($v('sel-session'))}`
+        ).then(r => r.json());
 
-        const res = await fetch(url);
-        const data = await res.json();
+        if (!res.ok) { showMsg('gen-msg', res.message || 'Failed to load students.', 'err'); return; }
 
-        if (!data.ok) {
-          showAlert('config-alert', 'danger', 'Failed to fetch students: ' + (data.message || 'Server error'));
+        let students = res.data || [];
+        if (!students.length) {
+          showMsg('gen-msg', 'No students found for this class / group / session.', 'err');
           return;
         }
 
-        matchedStudents = data.data || [];
+        // Filter by roll range if specified
+        if (rollStart || rollEnd) {
+          students = students.filter(s => {
+            const roll = parseInt(s.roll) || 0;
+            if (rollStart && rollEnd) return roll >= rollStart && roll <= rollEnd;
+            if (rollStart) return roll >= rollStart;
+            if (rollEnd)   return roll <= rollEnd;
+            return true;
+          });
+        }
 
-        if (!matchedStudents.length) {
-          showAlert('config-alert', 'warning', 'No students found matching the selected criteria or roll range.');
-          $('card-sheets-output').style.display = 'none';
+        if (!students.length) {
+          showMsg('gen-msg', 'No students found in the specified roll number range.', 'err');
           return;
         }
 
-        // Divide students into chunks of exactly 20 students per sheet
-        const studentsPerSheet = 20;
-        const totalSheets = Math.ceil(matchedStudents.length / studentsPerSheet);
+        showMsg('gen-msg', '', '');
+        const clsLabel = $v('sel-class') === 'Class-XII' ? 'Class XII' : 'Class XI';
+        const grpRaw   = $v('sel-group');
+        const grpLabel = grpRaw === 'Business' ? 'Business Studies' : grpRaw;
 
-        $('output-meta-badge').textContent = `Total Students: ${matchedStudents.length} | Generated: ${totalSheets} Sheet(s) (20 students per page)`;
-        
-        // Render sheets for preview and print
-        renderSheets(cls, grp, examName, hallNo, studentsPerSheet);
-
-        $('card-sheets-output').style.display = 'block';
-        $('btn-print-top').style.display = 'inline-flex';
-        showAlert('config-alert', 'success', `Generated ${totalSheets} attendance sheet(s) for ${matchedStudents.length} students.`);
-
-        // Scroll to output
-        $('card-sheets-output').scrollIntoView({ behavior: 'smooth' });
-
-      } catch (err) {
-        showAlert('config-alert', 'danger', 'Error generating attendance sheets: ' + err.message);
+        renderSheets(students, examName, hall, clsLabel, grpLabel, _activeRoutine.entries);
+      } catch (e) {
+        showMsg('gen-msg', 'Network error: ' + e.message, 'err');
       }
     }
 
-    // Render exact sheets HTML
-    function renderSheets(cls, grp, examName, hallNo, pageSize) {
-      const screenContainer = $('screen-sheets-container');
-      const printContainer = $('attendance-sheet-print-container');
+    // ── Render pages ──────────────────────────────────────────────────────────
+    const PER_PAGE = 20;
 
-      screenContainer.innerHTML = '';
-      printContainer.innerHTML = '';
-
-      const totalStudents = matchedStudents.length;
-      const totalPages = Math.ceil(totalStudents / pageSize);
-
-      // Determine display group label
-      let displayGroup = grp;
-      if (grp === 'Business') displayGroup = 'Business Studies';
-
-      // Format class display: Class-XI -> Class XI, Class-XII -> Class XII
-      const displayClass = cls.replace('-', ' ');
+    function renderSheets(students, examName, hall, clsLabel, grpLabel, entries) {
+      const output     = $('sheet-output');
+      output.innerHTML = '';
+      const totalPages = Math.ceil(students.length / PER_PAGE);
 
       for (let p = 0; p < totalPages; p++) {
-        const pageStudents = matchedStudents.slice(p * pageSize, (p + 1) * pageSize);
+        const chunk = students.slice(p * PER_PAGE, (p + 1) * PER_PAGE);
+        output.innerHTML += buildSheetPage(chunk, examName, hall, clsLabel, grpLabel, entries, p + 1, totalPages);
+      }
 
-        // Pad to 20 rows if less than 20 on the last sheet so table structure remains rigid
-        const rowsNeeded = pageSize;
+      output.style.display = 'block';
+      $('sheet-controls-wrap').style.display = '';
+      $('sheet-summary').textContent = `${students.length} students \u2014 ${totalPages} sheet(s)`;
+      output.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 
-        // Build Table Header
-        let thRow1 = `
-          <th rowspan="2" class="att-col-roll">Roll<br>No.</th>
-          <th rowspan="2" class="att-col-name">Student Name</th>
-        `;
+    function buildSheetPage(students, examName, hall, clsLabel, grpLabel, entries, pageNum, totalPages) {
+      // Build 2-row header matching screenshot:
+      // Row 1: Roll No. (rowspan 2) | Student Name (rowspan 2) | Photo (rowspan 2) | [Date] for each subject
+      // Row 2: Subject-1 for each subject
+      const dateHeaders = entries.map(e =>
+        `<th class="th-sub">${esc(e.date || '[Date]')}</th>`
+      ).join('');
 
-        let thRow2 = '';
+      const subjectHeaders = entries.map(e =>
+        `<th class="th-sub">${esc(e.subject || '')}</th>`
+      ).join('');
 
-        currentRoutine.forEach((r, rIdx) => {
-          thRow1 += `<th class="att-col-sig">${r.date || `[Date]`}</th>`;
-          thRow2 += `<th class="att-col-sig" title="${r.subject}">${r.subject || `Subject-${rIdx + 1}`}</th>`;
-        });
+      const theadHtml = `
+        <tr>
+          <th class="th-roll" rowspan="2">Roll<br>No.</th>
+          <th class="th-name" rowspan="2">Student Name</th>
+          <th class="th-photo" rowspan="2">Photo</th>
+          ${dateHeaders}
+        </tr>
+        <tr>
+          ${subjectHeaders}
+        </tr>`;
 
-        // Build Table Rows (strictly 20 rows)
-        let rowsHtml = '';
-        for (let r = 0; r < rowsNeeded; r++) {
-          const student = pageStudents[r];
-          if (student) {
-            rowsHtml += `
-              <tr>
-                <td class="att-col-roll">${student.roll}</td>
-                <td class="att-col-name" title="${student.name}">${student.name}</td>
-                ${currentRoutine.map(() => '<td class="att-col-sig"></td>').join('')}
-              </tr>
-            `;
-          } else {
-            // Empty row placeholder for clean table alignment
-            rowsHtml += `
-              <tr>
-                <td class="att-col-roll">&nbsp;</td>
-                <td class="att-col-name">&nbsp;</td>
-                ${currentRoutine.map(() => '<td class="att-col-sig">&nbsp;</td>').join('')}
-              </tr>
-            `;
-          }
-        }
+      // Body rows
+      const bodyRows = students.map(s => {
+        const photoCell = s.photo
+          ? `<img src="${esc(s.photo)}" alt="Photo">`
+          : `<div class="no-ph">N/A</div>`;
+        const sigCells  = entries.map(() => `<td class="td-sig"></td>`).join('');
+        return `<tr>
+          <td class="td-roll">${esc(s.roll)}</td>
+          <td class="td-name">${esc(s.name)}</td>
+          <td class="td-photo">${photoCell}</td>
+          ${sigCells}
+        </tr>`;
+      }).join('');
 
-        // Sheet HTML (Exact replica of reference screenshot)
-        const sheetHtml = `
-          <div class="att-sheet-page">
-            <div class="att-hdr">
-              <div class="att-hdr-center">
-                <div class="att-hdr-college">${collegeName}</div>
-                <div class="att-hdr-class">${displayClass}</div>
-                <div class="att-hdr-exam">${examName}</div>
-                <div class="att-hdr-title">Attendance sheet</div>
-              </div>
-              <div class="att-hdr-right-boxes">
-                <div class="att-box">${displayGroup}</div>
-                <div class="att-box">${hallNo}</div>
-              </div>
+      const colSpan = 3 + entries.length;
+
+      return `
+        <div class="att-sheet-page">
+          <div class="att-hdr-wrap">
+            <div class="att-hdr-center">
+              <div class="att-college">Moinuddin Adarsha Mohila College, Sylhet</div>
+              <div class="att-class">${esc(clsLabel)}</div>
+              <div class="att-exam">${esc(examName)}</div>
+              <div class="att-title">Attendance sheet</div>
             </div>
-
-            <table class="att-table">
-              <thead>
-                <tr>${thRow1}</tr>
-                <tr>${thRow2}</tr>
-              </thead>
-              <tbody>
-                ${rowsHtml}
-              </tbody>
-            </table>
+            <div class="att-hdr-right">
+              <div class="att-info-box">${esc(grpLabel)}</div>
+              <div class="att-info-box">Hall No. ${esc(hall)}</div>
+            </div>
           </div>
-        `;
-
-        screenContainer.insertAdjacentHTML('beforeend', sheetHtml);
-        printContainer.insertAdjacentHTML('beforeend', sheetHtml);
-      }
+          <table class="att-table">
+            <thead>${theadHtml}</thead>
+            <tbody>${bodyRows}</tbody>
+            <tfoot>
+              <tr><td colspan="${colSpan}">Sheet ${pageNum} of ${totalPages}</td></tr>
+            </tfoot>
+          </table>
+        </div>`;
     }
 
-    // ── PRINT ATTENDANCE SHEETS (NATIVE BROWSER PRINT) ──
-    function printAttendanceSheets() {
-      if (!matchedStudents.length) {
-        showAlert('config-alert', 'danger', 'Please generate the attendance sheet first.');
-        return;
-      }
-      $('attendance-sheet-print-container').style.display = 'block';
-      window.print();
+    function clearSheet() {
+      const output = $('sheet-output');
+      output.innerHTML = '';
+      output.style.display = 'none';
+      $('sheet-controls-wrap').style.display = 'none';
+      $('sheet-summary').textContent = '';
     }
 
-    // ── RESET FORM ──
-    function resetForm() {
-      $('sel-class').value = '';
-      $('sel-group').value = '';
-      $('sel-session').value = '';
-      $('cfg-roll-from').value = '';
-      $('cfg-roll-to').value = '';
-      currentRoutine = [];
-      matchedStudents = [];
-      hideAlert('routine-alert');
-      hideAlert('config-alert');
-      $('card-routine-section').style.display = 'none';
-      $('card-hall-section').style.display = 'none';
-      $('card-sheets-output').style.display = 'none';
-      $('screen-sheets-container').innerHTML = '';
-      $('attendance-sheet-print-container').innerHTML = '';
+    // ── Auth init ─────────────────────────────────────────────────────────────
+    async function doLogout() {
+      if (!confirm('Are you sure you want to logout?')) return;
+      try { await fetch('/api/logout', { method: 'POST' }); } catch (e) {}
+      window.location.href = '/login';
     }
 
-    // ── INIT ──
-    loadSettings();
+    (async function init() {
+      try {
+        const res  = await fetch('/api/auth-status');
+        const auth = await res.json();
+        if (!auth.authenticated) { window.location.href = '/login'; return; }
+        const isAdmin = auth.role === 'admin';
+        $('nav-name').textContent   = isAdmin ? 'Admin' : 'Teacher';
+        $('nav-role').textContent   = isAdmin ? 'System Admin' : 'Marks Entry';
+        $('nav-avatar').textContent = isAdmin ? 'A' : 'T';
+      } catch (e) { window.location.href = '/login'; }
+    })();
+
+    // ── Page transition loader ────────────────────────────────────────────────
+    (function () {
+      const loader = document.getElementById('page-loader');
+      if (!loader) return;
+      const show = () => loader.classList.add('visible');
+      const hide = () => loader.classList.remove('visible');
+      document.addEventListener('click', function (event) {
+        const anchor = event.target.closest('a');
+        if (!anchor || !anchor.href) return;
+        const target = anchor.getAttribute('target');
+        const href   = anchor.getAttribute('href');
+        if (target === '_blank' || target === '_top' || target === '_parent') return;
+        if (!href || href.trim().startsWith('javascript:') || href.trim().startsWith('#')) return;
+        const url = new URL(anchor.href, location.href);
+        if (url.origin !== location.origin) return;
+        if (url.pathname === location.pathname && url.search === location.search) return;
+        event.preventDefault();
+        show();
+        setTimeout(() => { window.location.href = url.href; }, 180);
+      }, true);
+      window.addEventListener('beforeunload', show);
+      window.addEventListener('pageshow', hide);
+    })();
   </script>
 </body>
 </html>

@@ -183,6 +183,9 @@ _COLUMN_MIGRATIONS = [
     ("students", "humanities_main_subjects", "VARCHAR(100) DEFAULT ''"),
     ("admission_applications", "humanities_main_subjects", "VARCHAR(100) DEFAULT ''"),
     ("admission_applications", "ssc_group", "VARCHAR(50) DEFAULT ''"),
+    ("exam_routines", "group_name",  "VARCHAR(50) DEFAULT ''"),
+    ("exam_routines", "entries",     "TEXT DEFAULT '[]'"),
+    ("exam_routines", "uploaded_at", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP"),
 ]
 
 with app.app_context():
@@ -466,6 +469,14 @@ def bulk_photo_page():
     if not session.get('authenticated'):
         return redirect('/login')
     return _serve_html('bulk-photo.html')
+
+
+@app.route('/exam_attt_sheet.html')
+def exam_attendance_sheet_page():
+    """Exam Attendance Sheet page."""
+    if not session.get('authenticated'):
+        return redirect('/login')
+    return _serve_html('exam_attt_sheet.html')
 
 @app.route('/analytics')
 def analytics_page():
@@ -773,205 +784,6 @@ def seat_plan_page():
     if not session.get('authenticated'):
         return redirect('/login')
     return _serve_html('seat-plan.html')
-
-
-@app.route('/exam_attt_sheet.html')
-@app.route('/exam-attendance-sheet')
-def exam_attendance_sheet_page():
-    """Exam Attendance Sheet — landscape attendance sheets per hall with bulk routine import."""
-    if not session.get('authenticated'):
-        return redirect('/login')
-    return _serve_html('exam_attt_sheet.html')
-
-
-# ─────────────────────────────────────────────
-# EXAM ROUTINE & ATTENDANCE SHEET API
-# ─────────────────────────────────────────────
-
-@app.route('/api/exam-routine', methods=['GET'])
-@require_auth
-def get_exam_routines():
-    """
-    Fetch exam routine records filtered by cls, group, session (and optional exam_name).
-    """
-    cls_val     = (request.args.get('cls') or '').strip()
-    group_val   = (request.args.get('group') or '').strip()
-    session_val = (request.args.get('session') or '').strip().replace('\u2013', '-').replace('\u2014', '-')
-    exam_name   = (request.args.get('exam_name') or '').strip()
-
-    if not cls_val or not group_val:
-        return jsonify({'ok': False, 'message': 'cls and group are required'}), 400
-
-    query = ExamRoutine.query.filter_by(cls=cls_val, group=group_val)
-    if session_val:
-        query = query.filter_by(session=session_val)
-    if exam_name:
-        query = query.filter_by(exam_name=exam_name)
-
-    records = query.order_by(ExamRoutine.order_idx.asc(), ExamRoutine.id.asc()).all()
-    return jsonify({
-        'ok': True,
-        'data': [r.to_dict() for r in records]
-    })
-
-
-@app.route('/api/exam-routine/bulk', methods=['POST'])
-@require_auth
-def bulk_save_exam_routine():
-    """
-    Save or replace bulk exam routine for a specific cls, group, session.
-    """
-    body = request.get_json(force=True, silent=True) or {}
-    cls_val     = (body.get('cls') or '').strip()
-    group_val   = (body.get('group') or '').strip()
-    session_val = (body.get('session') or '').strip().replace('\u2013', '-').replace('\u2014', '-')
-    exam_name   = (body.get('exam_name') or '').strip()
-    routines    = body.get('routines', [])
-
-    if not cls_val or not group_val or not session_val:
-        return jsonify({'ok': False, 'message': 'cls, group, and session are required'}), 400
-
-    if not routines:
-        return jsonify({'ok': False, 'message': 'No routine entries provided'}), 400
-
-    try:
-        # Delete existing routine for this cls, group, and session to avoid duplicates
-        delete_q = ExamRoutine.query.filter_by(cls=cls_val, group=group_val, session=session_val)
-        if exam_name:
-            delete_q = delete_q.filter_by(exam_name=exam_name)
-        delete_q.delete(synchronize_session=False)
-
-        new_records = []
-        for idx, item in enumerate(routines):
-            date_text = str(item.get('date') or item.get('dateDay') or '').strip()
-            subject   = str(item.get('subject') or '').strip()
-            day_text  = str(item.get('day') or '').strip()
-            time_text = str(item.get('time') or '').strip()
-
-            if not date_text and not subject:
-                continue
-
-            r = ExamRoutine(
-                cls=cls_val,
-                group=group_val,
-                session=session_val,
-                exam_name=exam_name or item.get('exam_name', ''),
-                date_text=date_text,
-                day_text=day_text,
-                subject=subject,
-                time_text=time_text,
-                order_idx=idx + 1
-            )
-            db.session.add(r)
-            new_records.append(r)
-
-        db.session.commit()
-        return jsonify({
-            'ok': True,
-            'message': f'Successfully saved {len(new_records)} routine entries.',
-            'count': len(new_records),
-            'data': [r.to_dict() for r in new_records]
-        })
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'ok': False, 'message': f'Database error: {str(e)}'}), 500
-
-
-@app.route('/api/exam-routine', methods=['DELETE'])
-@require_auth
-def delete_exam_routine():
-    """
-    Delete exam routine by id or by (cls, group, session).
-    """
-    item_id     = request.args.get('id')
-    cls_val     = (request.args.get('cls') or '').strip()
-    group_val   = (request.args.get('group') or '').strip()
-    session_val = (request.args.get('session') or '').strip().replace('\u2013', '-').replace('\u2014', '-')
-    exam_name   = (request.args.get('exam_name') or '').strip()
-
-    try:
-        if item_id:
-            r = ExamRoutine.query.get(item_id)
-            if not r:
-                return jsonify({'ok': False, 'message': 'Routine entry not found'}), 404
-            db.session.delete(r)
-            db.session.commit()
-            return jsonify({'ok': True, 'message': 'Routine entry deleted.'})
-
-        if not cls_val or not group_val or not session_val:
-            return jsonify({'ok': False, 'message': 'cls, group, and session are required to delete a routine'}), 400
-
-        q = ExamRoutine.query.filter_by(cls=cls_val, group=group_val, session=session_val)
-        if exam_name:
-            q = q.filter_by(exam_name=exam_name)
-        count = q.delete(synchronize_session=False)
-        db.session.commit()
-        return jsonify({'ok': True, 'message': f'Deleted {count} routine entries.'})
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'ok': False, 'message': f'Database error: {str(e)}'}), 500
-
-
-@app.route('/api/exam-attendance/students', methods=['GET'])
-@require_auth
-def get_exam_attendance_students():
-    """
-    Fetch students for attendance sheet filtered by cls, group, session, and optional roll range.
-    Sorted numerically by roll number.
-    """
-    cls_val     = (request.args.get('cls') or '').strip()
-    group_val   = (request.args.get('group') or '').strip()
-    session_val = (request.args.get('session') or '').strip().replace('\u2013', '-').replace('\u2014', '-')
-    roll_from   = (request.args.get('roll_from') or '').strip()
-    roll_to     = (request.args.get('roll_to') or '').strip()
-
-    if not cls_val or not group_val:
-        return jsonify({'ok': False, 'message': 'cls and group are required'}), 400
-
-    query = Student.query.filter_by(cls=cls_val, group=group_val)
-    if session_val:
-        query = query.filter((Student.session == session_val) | (Student.year == session_val))
-
-    students = query.all()
-
-    # Sort numerically by roll
-    def _roll_sort_key(s):
-        try:
-            return (0, int(s.roll))
-        except (ValueError, TypeError):
-            return (1, s.roll or '')
-
-    students = sorted(students, key=_roll_sort_key)
-
-    # Filter by roll range if provided
-    if roll_from or roll_to:
-        filtered = []
-        try:
-            rf = int(roll_from) if roll_from else None
-            rt = int(roll_to) if roll_to else None
-            for s in students:
-                try:
-                    r_num = int(s.roll)
-                    if rf is not None and r_num < rf:
-                        continue
-                    if rt is not None and r_num > rt:
-                        continue
-                    filtered.append(s)
-                except (ValueError, TypeError):
-                    if roll_from and s.roll < roll_from:
-                        continue
-                    if roll_to and s.roll > roll_to:
-                        continue
-                    filtered.append(s)
-            students = filtered
-        except Exception:
-            pass
-
-    return jsonify({
-        'ok': True,
-        'count': len(students),
-        'data': [s.to_dict() for s in students]
-    })
 
 
 @app.route('/api/group-results/filters', methods=['GET'])
@@ -4836,6 +4648,102 @@ with app.app_context():
             db.session.rollback()
         except Exception:
             pass
+
+
+
+# ─────────────────────────────────────────────
+# EXAM ATTENDANCE SHEET — Routine & Student APIs
+# ─────────────────────────────────────────────
+
+@app.route('/api/exam-routine', methods=['GET'])
+@require_auth
+def get_exam_routines():
+    """Return saved exam routines filtered by cls, group, session."""
+    cls_val   = (request.args.get('cls')   or '').strip()
+    grp_val   = (request.args.get('group') or '').strip()
+    sess_val  = (request.args.get('session') or '').strip()
+
+    q = ExamRoutine.query
+    if cls_val:  q = q.filter_by(cls=cls_val)
+    if grp_val:  q = q.filter_by(group_name=grp_val)
+    if sess_val: q = q.filter_by(session=sess_val)
+    routines = q.order_by(ExamRoutine.uploaded_at.desc()).all()
+    return jsonify({'ok': True, 'data': [r.to_dict() for r in routines]})
+
+
+@app.route('/api/exam-routine/upload', methods=['POST'])
+@require_auth
+def upload_exam_routine():
+    """Save an uploaded exam routine to the database."""
+    import json as _json
+    data = request.get_json(force=True, silent=True) or {}
+    cls_val   = (data.get('cls')       or '').strip()
+    grp_val   = (data.get('group')     or '').strip()
+    sess_val  = (data.get('session')   or '').strip()
+    exam_name = (data.get('exam_name') or '').strip()
+    entries   = data.get('entries', [])
+
+    if not cls_val or not grp_val or not sess_val or not exam_name:
+        return jsonify({'ok': False, 'message': 'cls, group, session and exam_name are required'}), 400
+    if not isinstance(entries, list) or len(entries) == 0:
+        return jsonify({'ok': False, 'message': 'entries must be a non-empty list'}), 400
+
+    routine = ExamRoutine(
+        cls=cls_val,
+        group_name=grp_val,
+        session=sess_val,
+        exam_name=exam_name,
+        entries=_json.dumps(entries),
+    )
+    db.session.add(routine)
+    db.session.commit()
+    return jsonify({'ok': True, 'message': 'Routine saved successfully', 'data': routine.to_dict()})
+
+
+@app.route('/api/exam-routine/<int:routine_id>', methods=['DELETE'])
+@require_auth
+def delete_exam_routine(routine_id):
+    """Delete a saved exam routine by id."""
+    routine = ExamRoutine.query.get(routine_id)
+    if not routine:
+        return jsonify({'ok': False, 'message': 'Routine not found'}), 404
+    db.session.delete(routine)
+    db.session.commit()
+    return jsonify({'ok': True, 'message': 'Routine deleted'})
+
+
+@app.route('/api/exam-attendance/students', methods=['GET'])
+@require_auth
+def get_exam_attendance_students():
+    """Return students sorted by roll for a specific class/group/session."""
+    cls_val  = (request.args.get('cls')     or '').strip()
+    grp_val  = (request.args.get('group')   or '').strip()
+    sess_val = (request.args.get('session') or '').strip().replace('\u2013', '-').replace('\u2014', '-')
+
+    if not cls_val or not grp_val or not sess_val:
+        return jsonify({'ok': False, 'message': 'cls, group and session are required'}), 400
+
+    students = Student.query.filter_by(cls=cls_val, group=grp_val).filter(
+        (Student.session == sess_val) | (Student.year == sess_val)
+    ).all()
+
+    def _roll_key(s):
+        try:
+            return (0, int(s.roll))
+        except (ValueError, TypeError):
+            return (1, s.roll or '')
+
+    students = sorted(students, key=_roll_key)
+
+    result = []
+    for s in students:
+        result.append({
+            'id':    s.id,
+            'name':  s.name,
+            'roll':  s.roll,
+            'photo': s.photo or '',
+        })
+    return jsonify({'ok': True, 'data': result})
 
 
 # ─────────────────────────────────────────────
