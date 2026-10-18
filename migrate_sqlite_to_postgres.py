@@ -111,7 +111,7 @@ def migrate():
                 
                 # Convert SQLite booleans to python booleans for PostgreSQL
                 for idx, col_name in enumerate(cols):
-                    if col_name == 'student_submitted':
+                    if col_name in ('student_submitted', 'absent'):
                         row_val[idx] = bool(row_val[idx]) if row_val[idx] is not None else False
                 
                 pg_cur.execute(insert_query, row_val)

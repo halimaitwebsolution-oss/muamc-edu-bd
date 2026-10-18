@@ -53,22 +53,33 @@ _db_url = None
 if _db_raw_url:
     if _db_raw_url.startswith('postgres://'):
         _db_raw_url = _db_raw_url.replace('postgres://', 'postgresql://', 1)
-    
+
     if _db_raw_url.startswith('postgresql'):
+        # Add sslmode=require for Render-hosted PostgreSQL if not already present
+        if 'sslmode' not in _db_raw_url:
+            _db_raw_url += '?sslmode=require'
         try:
             from sqlalchemy import create_engine, text
-            _test_engine = create_engine(_db_raw_url, connect_args={'connect_timeout': 5})
+            # Increased timeout: Render cold starts can be slow
+            _test_engine = create_engine(_db_raw_url, connect_args={'connect_timeout': 15})
             with _test_engine.connect() as _c:
                 _c.execute(text("SELECT 1"))
             _test_engine.dispose()
             _db_url = _db_raw_url
             print(f"[DB] Successfully connected to PostgreSQL database.")
         except Exception as _err:
-            print(f"[DB] Primary PostgreSQL database connection failed ({_err}).")
-            print("[DB] Falling back to local SQLite database (hsc_academy.db)...")
+            # IMPORTANT: Do NOT silently fall back to SQLite when DATABASE_URL is explicitly set.
+            # A silent fallback means Render shows 0 students (empty SQLite) instead of crashing
+            # with a meaningful error. Crashing loudly is safer and easier to debug.
+            print(f"[DB] FATAL: DATABASE_URL is set but PostgreSQL connection failed: {_err}")
+            raise SystemExit(
+                f"[DB] Cannot connect to PostgreSQL. Check DATABASE_URL and network access. Error: {_err}"
+            )
 
 if not _db_url:
+    # No DATABASE_URL configured — use local SQLite for development only
     _db_url = f"sqlite:///{os.path.join(BASE_DIR, 'hsc_academy.db')}"
+    print("[DB] No DATABASE_URL set — using local SQLite (development mode).")
 
 app.config['SQLALCHEMY_DATABASE_URI'] = _db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -95,8 +106,14 @@ app.config['PERMANENT_SESSION_LIFETIME'] = 28800  # 8-hour session timeout
 _allowed_origins_raw = os.environ.get('ALLOWED_ORIGINS', '')
 _allowed_origins = [o.strip() for o in _allowed_origins_raw.split(',') if o.strip()]
 if not _allowed_origins:
-    # Default: same-origin only (localhost for dev)
+    # Default: same-origin only (localhost for dev, + auto-detected Render URL)
     _allowed_origins = ['http://localhost:5000', 'http://127.0.0.1:5000']
+    # Render automatically sets RENDER_EXTERNAL_URL — add it if present
+    _render_url = os.environ.get('RENDER_EXTERNAL_URL', '').rstrip('/')
+    if _render_url:
+        _allowed_origins.append(_render_url)
+    # Also support the known production domain directly as a safety net
+    _allowed_origins.append('https://muamc-edu-bd.onrender.com')
 CORS(app,
      origins=_allowed_origins,
      supports_credentials=True,
