@@ -40,6 +40,8 @@
     .site-header{background:linear-gradient(180deg,#0d2b45 0%,#0a2138 100%);position:fixed;left:0;top:70px;width:220px;height:calc(100vh - 70px);z-index:200;border-right:1px solid rgba(255,255,255,.06);box-shadow:4px 0 16px rgba(0,0,0,.3);display:flex;flex-direction:column;overflow-y:auto;transition:transform .3s ease;}
     .nav-strip{display:flex;flex-direction:column;padding:16px 0;background:rgba(0,0,0,.2);flex:1;}
     .nt{padding:12px 16px;cursor:pointer;font-size:.79rem;font-weight:500;border-left:3px solid transparent;color:rgba(255,255,255,.55);transition:color .15s,border-color .15s,background .15s;display:flex;align-items:center;gap:10px;text-decoration:none;}
+    .nt .nav-icon { width: 16px; text-align: center; font-size: .82rem; flex-shrink: 0; opacity: .75; }
+    .nt:hover .nav-icon, .nt.active .nav-icon { opacity: 1; }
     .nt:hover{color:rgba(255,255,255,.88);background:rgba(255,255,255,.05);}
     .nt.active{color:var(--gold3);border-left-color:var(--gold2);background:rgba(255,255,255,.08);}
     .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:190;}
@@ -215,31 +217,32 @@
     <div class="top-nav-logo-text"><h1>Moinuddin Adarsha Mohila College</h1><p>Student Database System</p></div>
   </div>
   <div class="top-nav-admin">
-    <button class="hdr-hamburger" id="hdr-hamburger" onclick="toggleSidebar()" aria-label="Menu">&#9776;</button>
-    <button class="logout-btn" onclick="doLogout()">Logout</button>
+    <button class="hdr-hamburger" id="hdr-hamburger" onclick="toggleSidebar()" aria-label="Menu"><i class="fas fa-bars"></i></button>
+    <button class="logout-btn" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
   </div>
 </div>
 
 <header class="site-header" id="site-header">
   <nav class="nav-strip" id="nav-strip">
-    <a class="nt" href="/">Dashboard</a>
-    <a class="nt" href="/student-list.html">Student Management</a>
-    <a class="nt" href="/marks-entry.html">Mark Entry</a>
-    <a class="nt" href="/Teachers.html">Teachers</a>
-    <a class="nt" href="/Result-card.html">Result Card</a>
-    <a class="nt" href="/Admit-card.html">Admit Card</a>
-    <a class="nt" href="/bulk-photo.html">Bulk Photo Upload</a>
-    <a class="nt active" href="/analytics.html" style="border-top:1px solid rgba(255,255,255,.08);margin-top:8px;padding-top:16px;">Analytics</a>
-    <a class="nt" href="/result_analytics.html">Result Analytics</a>
-    <a class="nt" href="/group-results.html">Group-wise Results</a>
-    <a class="nt" href="/seat-plan.html">Seat Plan</a>
+    <a class="nt" href="/"><i class="fas fa-home nav-icon"></i> Dashboard</a>
+    <a class="nt" href="/student-list.html"><i class="fas fa-users nav-icon"></i> Student Management</a>
+    <a class="nt" href="/admission-admin.html">Admission</a>
+    <a class="nt" href="/marks-entry.html"><i class="fas fa-edit nav-icon"></i> Mark Entry</a>
+    <a class="nt" href="/Teachers.html"><i class="fas fa-chalkboard-teacher nav-icon"></i> Teachers</a>
+    <a class="nt" href="/Result-card.html"><i class="fas fa-file-invoice nav-icon"></i> Result Card</a>
+    <a class="nt" href="/Admit-card.html"><i class="fas fa-id-card nav-icon"></i> Admit Card</a>
+    <a class="nt" href="/bulk-photo.html"><i class="fas fa-images nav-icon"></i> Bulk Photo Upload</a>
+    <a class="nt active" href="/analytics.html" style="border-top:1px solid rgba(255,255,255,.08);margin-top:8px;padding-top:16px;"><i class="fas fa-chart-line nav-icon"></i> Analytics</a>
+    <a class="nt" href="/result_analytics.html"><i class="fas fa-chart-bar nav-icon"></i> Result Analytics</a>
+    <a class="nt" href="/group-results.html"><i class="fas fa-table nav-icon"></i> Group-wise Results</a>
+    <a class="nt" href="/seat-plan.html"><i class="fas fa-th nav-icon"></i> Seat Plan</a>
   </nav>
 </header>
 <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
 
 <main class="main" id="main-content">
   <div class="pg-hd">
-    <h2>Analytics</h2>
+    <h2><i class="fas fa-chart-line" style="margin-right:8px;color:var(--navy2);"></i>Analytics</h2>
     <p>Class promotion management and bulk data operations.</p>
   </div>
 
@@ -247,21 +250,21 @@
   <div class="tab-strip" role="tablist" aria-label="Analytics sections">
     <button class="tab-btn active" id="tab-btn-promotion" role="tab"
             aria-selected="true" aria-controls="tab-panel-promotion"
-            onclick="switchTab('promotion')">Class Promotion</button>
+            onclick="switchTab('promotion')"><i class="fas fa-user-graduate" style="margin-right:6px;"></i>Class Promotion</button>
     <button class="tab-btn danger-tab" id="tab-btn-deletion" role="tab"
             aria-selected="false" aria-controls="tab-panel-deletion"
-            onclick="switchTab('deletion')">Data Deletion</button>
+            onclick="switchTab('deletion')"><i class="fas fa-trash-alt" style="margin-right:6px;"></i>Data Deletion</button>
   </div>
 
   <!-- TAB PANEL: PROMOTION -->
   <div class="tab-panel active" id="tab-panel-promotion" role="tabpanel" aria-labelledby="tab-btn-promotion">
     <div class="card" id="promotion-card">
-      <div class="card-head"><h3>Class XI &#8594; Class XII Promotion</h3></div>
+      <div class="card-head"><h3><i class="fas fa-graduation-cap" style="margin-right:8px;color:var(--navy3);"></i>Class XI &#8594; Class XII Promotion</h3></div>
       <div class="card-body">
         <div class="fg-grid">
           <div class="fg">
             <label>Class (Fixed)</label>
-            <span class="fixed-class-badge">Class-XI</span>
+            <span class="fixed-class-badge"><i class="fas fa-user-tag" style="margin-right:6px;"></i>Class-XI</span>
             <span class="fg-note">Promotion is always XI to XII</span>
           </div>
           <div class="fg">
@@ -304,16 +307,16 @@
         </div>
         <div id="prom-alert" class="alert alert-err" style="margin-top:14px;display:none;"></div>
         <div class="btn-row">
-          <button class="btn btn-primary" id="prom-btn-load" onclick="promLoadStudents()" disabled>Load Students</button>
+          <button class="btn btn-primary" id="prom-btn-load" onclick="promLoadStudents()" disabled><i class="fas fa-search"></i> Load Students</button>
         </div>
         <div id="prom-table-section" style="display:none;margin-top:22px;">
           <hr class="section-sep">
           <div class="prom-controls">
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
-              <button class="btn btn-outline btn-sm" onclick="promSelectAll()">Select All</button>
-              <button class="btn btn-outline btn-sm" onclick="promDeselectAll()">Deselect All</button>
+              <button class="btn btn-outline btn-sm" onclick="promSelectAll()"><i class="fas fa-check-square"></i> Select All</button>
+              <button class="btn btn-outline btn-sm" onclick="promDeselectAll()"><i class="far fa-square"></i> Deselect All</button>
             </div>
-            <span class="prom-count-badge" id="prom-sel-count">0 selected</span>
+            <span class="prom-count-badge" id="prom-sel-count"><i class="fas fa-users-cog" style="margin-right:4px;"></i>0 selected</span>
           </div>
           <div class="prom-table-wrap">
             <table class="prom-table" aria-label="Students for Promotion">
@@ -327,7 +330,7 @@
             </table>
           </div>
           <div class="btn-row" style="margin-top:16px;">
-            <button class="btn btn-success" id="prom-btn-promote" onclick="openPromoteModal()" disabled>Promote Selected to Class-XII</button>
+            <button class="btn btn-success" id="prom-btn-promote" onclick="openPromoteModal()" disabled><i class="fas fa-level-up-alt"></i> Promote Selected to Class-XII</button>
             <span id="prom-skip-note" style="font-size:.76rem;color:var(--muted);display:none;"></span>
           </div>
         </div>
@@ -339,22 +342,22 @@
   <div class="tab-panel" id="tab-panel-deletion" role="tabpanel" aria-labelledby="tab-btn-deletion">
     <div class="card" id="deletion-card">
       <div class="card-head danger-head">
-        <h3>Data Management &#8212; Deletion</h3>
-        <span style="font-size:.72rem;color:var(--red);font-weight:700;letter-spacing:.3px;text-transform:uppercase;">Danger Zone</span>
+        <h3><i class="fas fa-exclamation-triangle" style="margin-right:8px;color:var(--red);"></i>Data Management &#8212; Deletion</h3>
+        <span style="font-size:.72rem;color:var(--red);font-weight:700;letter-spacing:.3px;text-transform:uppercase;"><i class="fas fa-shield-alt" style="margin-right:3px;"></i>Danger Zone</span>
       </div>
       <div class="card-body">
         <div class="danger-banner">
-          <span class="danger-tag">WARNING</span>
+          <span class="danger-tag"><i class="fas fa-radiation"></i> WARNING</span>
           <p>Deletion is <strong>permanent and cannot be undone</strong>. All records deleted from the database are lost forever. Verify your selections carefully. A multi-step confirmation is required before any data is removed.</p>
         </div>
         <div style="margin-bottom:20px;">
           <div style="font-size:.74rem;font-weight:600;color:var(--navy);margin-bottom:8px;">What to delete:</div>
           <div class="mode-toggle" role="group" aria-label="Deletion mode">
-            <button class="mode-btn active" id="del-mode-marks" onclick="setDelMode('marks')">Marks Only</button>
-            <button class="mode-btn" id="del-mode-students" onclick="setDelMode('students')">Students &amp; Marks</button>
+            <button class="mode-btn active" id="del-mode-marks" onclick="setDelMode('marks')"><i class="fas fa-file-alt" style="margin-right:4px;"></i>Marks Only</button>
+            <button class="mode-btn" id="del-mode-students" onclick="setDelMode('students')"><i class="fas fa-user-slash" style="margin-right:4px;"></i>Students &amp; Marks</button>
           </div>
           <div id="del-mode-warning" style="display:none;margin-top:10px;">
-            <div class="alert alert-err" style="font-size:.77rem;">Selecting "Students &amp; Marks" will permanently remove all student profiles, their marks, and their photos. This cannot be reversed.</div>
+            <div class="alert alert-err" style="font-size:.77rem;"><i class="fas fa-exclamation-circle" style="margin-right:4px;"></i>Selecting "Students &amp; Marks" will permanently remove all student profiles, their marks, and their photos. This cannot be reversed.</div>
           </div>
         </div>
         <div class="fg-grid">
@@ -390,7 +393,7 @@
         </div>
         <div id="del-alert" class="alert alert-err" style="margin-top:14px;display:none;"></div>
         <div class="btn-row">
-          <button class="btn btn-outline" id="del-btn-preview" onclick="delPreviewCount()" disabled>Preview Count</button>
+          <button class="btn btn-outline" id="del-btn-preview" onclick="delPreviewCount()" disabled><i class="fas fa-calculator"></i> Preview Count</button>
         </div>
         <div id="del-preview-result" style="display:none;">
           <div class="preview-pill marks" id="del-preview-pill">
@@ -402,7 +405,7 @@
           <p>To confirm, type <strong>DELETE</strong> exactly in the field below, then click the button. This action <strong style="color:var(--red);">cannot be reversed</strong>.</p>
           <div class="confirm-row">
             <input type="text" class="confirm-input" id="del-confirm-input" placeholder="Type DELETE here" oninput="delCheckConfirm()" autocomplete="off" aria-label="Confirmation input">
-            <button class="btn btn-danger" id="del-btn-execute" onclick="delExecute()" disabled>Delete Now</button>
+            <button class="btn btn-danger" id="del-btn-execute" onclick="delExecute()" disabled><i class="fas fa-trash-alt"></i> Delete Now</button>
           </div>
         </div>
         <div class="del-progress-wrap" id="del-progress-wrap">
@@ -425,11 +428,11 @@
 <!-- PROMOTION MODAL -->
 <div class="modal-overlay" id="prom-modal" role="dialog" aria-modal="true" aria-labelledby="prom-modal-title">
   <div class="modal-box">
-    <div class="modal-title" id="prom-modal-title">Confirm Promotion</div>
+    <div class="modal-title" id="prom-modal-title"><i class="fas fa-user-graduate" style="margin-right:8px;color:var(--green);"></i>Confirm Promotion</div>
     <div class="modal-body" id="prom-modal-body">Are you sure?</div>
     <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closePromoteModal()">Cancel</button>
-      <button class="btn btn-success" id="prom-modal-confirm" onclick="promExecute()">Yes, Promote</button>
+      <button class="btn btn-outline" onclick="closePromoteModal()"><i class="fas fa-times"></i> Cancel</button>
+      <button class="btn btn-success" id="prom-modal-confirm" onclick="promExecute()"><i class="fas fa-check"></i> Yes, Promote</button>
     </div>
   </div>
 </div>
@@ -573,7 +576,7 @@ function promToggleAll(cb){_ps.forEach(function(s,i){s.checked=cb.checked;var c=
 function promSelectAll(){var cb=document.getElementById('prom-cb-all');cb.checked=true;promToggleAll(cb);}
 function promDeselectAll(){var cb=document.getElementById('prom-cb-all');cb.checked=false;promToggleAll(cb);}
 function syncHdrCb(){var m=document.getElementById('prom-cb-all');if(!m)return;var t=_ps.length,s=_ps.filter(function(x){return x.checked;}).length;m.checked=(t>0&&s===t);m.indeterminate=(s>0&&s<t);}
-function updatePromCount(){var s=_ps.filter(function(x){return x.checked;}).length;var b=document.getElementById('prom-sel-count');if(b)b.textContent=s+' selected';var btn=document.getElementById('prom-btn-promote');if(btn)btn.disabled=(s===0);}
+function updatePromCount(){var s=_ps.filter(function(x){return x.checked;}).length;var b=document.getElementById('prom-sel-count');if(b)b.innerHTML='<i class="fas fa-users-cog" style="margin-right:4px;"></i>'+s+' selected';var btn=document.getElementById('prom-btn-promote');if(btn)btn.disabled=(s===0);}
 
 function openPromoteModal(){
   var sel=_ps.filter(function(s){return s.checked;});
@@ -607,7 +610,7 @@ async function promExecute(){
       else{renderPromTable();updatePromCount();}
     }
   }catch(e){closePromoteModal();showToast('Network error during promotion.','error');}
-  finally{cb.disabled=false;cb.textContent='Yes, Promote';}
+  finally{cb.disabled=false;cb.innerHTML='<i class="fas fa-check"></i> Yes, Promote';}
 }
 
 /* ══════════════════════════════════════════
@@ -689,14 +692,14 @@ async function delPreviewCount(){
   var ses=document.getElementById('del-session').value;
   var ex=document.getElementById('del-exam').value;
   setAlert('del-alert','');resetDelState();
-  var btn=document.getElementById('del-btn-preview');var orig=btn.textContent;
+  var btn=document.getElementById('del-btn-preview');var orig=btn.innerHTML;
   btn.disabled=true;btn.innerHTML='<span class="spin dk"></span> Checking&hellip;';
   try{
     var params=new URLSearchParams({mode:_dMode,cls:cls,group:g,session:ses});
     if(_dMode==='marks'&&ex)params.set('exam_type',ex);
     var r=await fetch(API+'/api/analytics/deletion-count?'+params);
     var d=await r.json();
-    btn.textContent=orig;btn.disabled=false;
+    btn.innerHTML=orig;btn.disabled=false;
     if(!d.ok){setAlert('del-alert',d.message||'Failed to get count.');return;}
     _dPrevCount=d.count;
     document.getElementById('del-preview-num').textContent=d.count;
@@ -705,7 +708,7 @@ async function delPreviewCount(){
     showEl('del-preview-result');
     if(d.count===0){setAlert('del-alert','No records match the selected filters.','warn');}
     else{showEl('del-confirm-box');}
-  }catch(e){btn.textContent=orig;btn.disabled=false;setAlert('del-alert','Network error. Please try again.');}
+  }catch(e){btn.innerHTML=orig;btn.disabled=false;setAlert('del-alert','Network error. Please try again.');}
 }
 
 function delCheckConfirm(){var v=document.getElementById('del-confirm-input').value.trim();document.getElementById('del-btn-execute').disabled=(v!=='DELETE');}

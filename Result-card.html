@@ -457,6 +457,7 @@
     <nav class="nav-strip" id="nav-strip">
       <a class="nt" href="/"><i class="fas fa-home nav-icon"></i> Dashboard</a>
       <a class="nt" href="/student-list.html"><i class="fas fa-users nav-icon"></i> Student Management</a>
+      <a class="nt" href="/admission-admin.html">Admission</a>
       <a class="nt" href="/marks-entry.html"><i class="fas fa-edit nav-icon"></i> Mark Entry</a>
       <a class="nt" href="/Teachers.html"><i class="fas fa-chalkboard-teacher nav-icon"></i> Teachers</a>
       <a class="nt active" href="/Result-card.html"><i class="fas fa-file-invoice nav-icon"></i> Result Card</a>
@@ -532,7 +533,7 @@
                 <option value="">-- All --</option>
                 <option>Half-Yearly</option>
                 <option>Annual</option>
-                <option>Selection Test</option>
+                <option>Pre-test</option>
                 <option>Test</option>
                 <option>HSC</option>
               </select>
@@ -588,7 +589,7 @@
                 <option value="">-- All --</option>
                 <option>Half-Yearly</option>
                 <option>Annual</option>
-                <option>Selection Test</option>
+                <option>Pre-test</option>
                 <option>Test</option>
                 <option>HSC</option>
               </select>
@@ -653,7 +654,7 @@
                 <option value="">-- Select Exam --</option>
                 <option>Half-Yearly</option>
                 <option>Annual</option>
-                <option>Selection Test</option>
+                <option>Pre-test</option>
                 <option>Test</option>
                 <option>HSC</option>
               </select>
@@ -1054,14 +1055,14 @@
         const examText = hasMarks ? examKeys.join(', ') : 'No exams recorded';
         return `<div class="card" style="margin-bottom:12px;">
   <div class="card-head">
-    <h3 style="font-size:.85rem;">${s.name}</h3>
-    <span class="meta">${s.cls} — ${s.group} Group</span>
+    <h3 style="font-size:.85rem;">${(window.escHtml||(x=>x))(s.name)}</h3>
+    <span class="meta">${(window.escHtml||(x=>x))(s.cls)} — ${(window.escHtml||(x=>x))(s.group)} Group</span>
   </div>
   <div class="card-body" style="padding:14px 20px;">
     <div class="alert alert-ok" style="margin-bottom:12px;">
-      <strong>${s.name}</strong> &nbsp;|&nbsp; Roll: ${s.roll}
-      &nbsp;|&nbsp; Reg: ${s.reg || '—'}
-      &nbsp;|&nbsp; Session: ${s.session || '—'}
+      <strong>${(window.escHtml||(x=>x))(s.name)}</strong> &nbsp;|&nbsp; Roll: ${(window.escHtml||(x=>x))(s.roll)}
+      &nbsp;|&nbsp; Reg: ${(window.escHtml||(x=>x))(s.reg) || '—'}
+      &nbsp;|&nbsp; Session: ${(window.escHtml||(x=>x))(s.session) || '—'}
       &nbsp;|&nbsp; Exams: <em>${examText}</em>
     </div>
     <div class="btn-row" style="margin-top:0;">
@@ -1241,9 +1242,8 @@
       const peers = _students.filter(s => s.cls === stu.cls && s.group === stu.group);
       const peerScores = peers.map(p => {
         const pMarks = db[p.id] || {};
-        const pKey = Object.keys(pMarks).includes(examType) ? examType : (Object.keys(pMarks).pop() || null);
-        if (!pKey || !pMarks[pKey]) return { id: p.id, gpa: 0, total: 0 };
-        const pm = pMarks[pKey];
+        if (!pMarks[examType]) return { id: p.id, gpa: 0, total: 0 };
+        const pm = pMarks[examType];
         const res = computeStudentGPAAndResult(p, pm, flatStudentSubs(p, p.cls));
         return { id: p.id, gpa: res.gpa, total: res.totalMark };
       });

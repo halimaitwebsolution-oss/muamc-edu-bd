@@ -33,8 +33,10 @@ except ImportError:
 
 from flask import Flask, request, jsonify, send_from_directory, abort, session, Response, redirect
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
-from models import db, Student, Mark, Teacher, Setting, Archive, PromotionLog
+from models import db, Student, Mark, Teacher, Setting, Archive, PromotionLog, AdmissionApplication
 
 # ─────────────────────────────────────────────
 # App Setup
@@ -45,9 +47,29 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # Database Configuration
 # Priority: DATABASE_URL env var → local SQLite fallback
 # DATABASE_URL is loaded from .env if python-dotenv is installed.
-_db_url = os.environ.get('DATABASE_URL') or f"sqlite:///{os.path.join(BASE_DIR, 'hsc_academy.db')}"
-if _db_url.startswith('postgres://'):
-    _db_url = _db_url.replace('postgres://', 'postgresql://', 1)
+_db_raw_url = os.environ.get('DATABASE_URL')
+_db_url = None
+
+if _db_raw_url:
+    if _db_raw_url.startswith('postgres://'):
+        _db_raw_url = _db_raw_url.replace('postgres://', 'postgresql://', 1)
+    
+    if _db_raw_url.startswith('postgresql'):
+        try:
+            from sqlalchemy import create_engine, text
+            _test_engine = create_engine(_db_raw_url, connect_args={'connect_timeout': 5})
+            with _test_engine.connect() as _c:
+                _c.execute(text("SELECT 1"))
+            _test_engine.dispose()
+            _db_url = _db_raw_url
+            print(f"[DB] Successfully connected to PostgreSQL database.")
+        except Exception as _err:
+            print(f"[DB] Primary PostgreSQL database connection failed ({_err}).")
+            print("[DB] Falling back to local SQLite database (hsc_academy.db)...")
+
+if not _db_url:
+    _db_url = f"sqlite:///{os.path.join(BASE_DIR, 'hsc_academy.db')}"
+
 app.config['SQLALCHEMY_DATABASE_URI'] = _db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -62,7 +84,47 @@ if _db_url.startswith('postgresql'):
 
 # Secret key for server-side session (session cookie auth)
 app.secret_key = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
-CORS(app, supports_credentials=True)
+
+# ── Session cookie hardening (ISSUE-006) ───────────────────────────
+app.config['SESSION_COOKIE_SECURE']    = not _db_url.startswith('sqlite')  # True in prod (HTTPS)
+app.config['SESSION_COOKIE_HTTPONLY']  = True   # Prevent JS access
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # CSRF protection
+app.config['PERMANENT_SESSION_LIFETIME'] = 28800  # 8-hour session timeout
+
+# ── CORS — restrict to known origins (ISSUE-007) ───────────────────
+_allowed_origins_raw = os.environ.get('ALLOWED_ORIGINS', '')
+_allowed_origins = [o.strip() for o in _allowed_origins_raw.split(',') if o.strip()]
+if not _allowed_origins:
+    # Default: same-origin only (localhost for dev)
+    _allowed_origins = ['http://localhost:5000', 'http://127.0.0.1:5000']
+CORS(app,
+     origins=_allowed_origins,
+     supports_credentials=True,
+     allow_headers=['Content-Type'])
+
+# ── Rate limiter — prevents brute-force on /api/login (ISSUE-003) ──
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=[],           # No global limit; apply per-route only
+    storage_uri='memory://',
+)
+
+@app.after_request
+def add_security_headers(response):
+    """Add security headers to every response."""
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options']         = 'SAMEORIGIN'
+    response.headers['Referrer-Policy']          = 'strict-origin-when-cross-origin'
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self'; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; "
+        "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
+        "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; "
+        "img-src 'self' data: blob: https:; "
+        "connect-src 'self';"
+    )
+    return response
 
 # Initialize database
 db.init_app(app)
@@ -95,6 +157,8 @@ _COLUMN_MIGRATIONS = [
     ("archive",  "photo_base64",      "TEXT DEFAULT ''"),
     ("marks",    "absent",            "BOOLEAN DEFAULT FALSE"),
     ("students", "humanities_main_subjects", "VARCHAR(100) DEFAULT ''"),
+    ("admission_applications", "humanities_main_subjects", "VARCHAR(100) DEFAULT ''"),
+    ("admission_applications", "ssc_group", "VARCHAR(50) DEFAULT ''"),
 ]
 
 with app.app_context():
@@ -107,67 +171,71 @@ with app.app_context():
         print(f"[DB] WARNING: Could not create tables: {_e}")
 
     # Run safe column migrations
-    if _db_url.startswith('postgresql'):
-        # Check if migrations are already complete to avoid exclusive table locks at startup
-        # Check whether ALL migration columns already exist.
-        # If any column is missing, run the full migration block.
-        _migration_needed = False
-        try:
-            with db.engine.connect() as _conn:
-                for _tbl, _col, _ in _COLUMN_MIGRATIONS:
-                    _res = _conn.execute(_text(
-                        f"SELECT EXISTS (SELECT 1 FROM information_schema.columns "
-                        f"WHERE table_name='{_tbl}' AND column_name='{_col}');"
-                    )).scalar()
-                    if not _res:
-                        _migration_needed = True
-                        print(f"[DB] Missing column detected: {_tbl}.{_col} — migrations will run.")
-                        break
-        except Exception:
-            _migration_needed = True
-
-        if _migration_needed:
-            with db.engine.connect() as _conn:
-                # Drop global unique roll constraint to allow non-globally unique roll numbers
+    try:
+        with db.engine.connect() as _conn:
+            # Drop global unique roll constraint to allow non-globally unique roll numbers (PostgreSQL & SQLite)
+            if app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('postgresql'):
                 try:
                     _conn.execute(_text("ALTER TABLE students DROP CONSTRAINT IF EXISTS students_roll_key;"))
                     _conn.commit()
                     print("[DB] Dropped global unique roll constraint successfully.")
                 except Exception as _ce:
-                    print(f"[DB] Drop unique constraint skipped: {_ce}")
+                    pass
+            elif 'sqlite' in app.config.get('SQLALCHEMY_DATABASE_URI', ''):
+                try:
+                    _row = _conn.execute(_text("SELECT sql FROM sqlite_master WHERE type='table' AND name='students'")).fetchone()
+                    if _row and 'UNIQUE (roll)' in _row[0]:
+                        print("[DB] Removing legacy UNIQUE (roll) constraint from SQLite students table...")
+                        _conn.execute(_text("PRAGMA foreign_keys = OFF;"))
+                        _conn.execute(_text("BEGIN TRANSACTION;"))
+                        _conn.execute(_text('''
+                            CREATE TABLE students_new (
+                                id VARCHAR(50) NOT NULL, name VARCHAR(255) NOT NULL, roll VARCHAR(50) NOT NULL, 
+                                reg VARCHAR(50), cls VARCHAR(50) NOT NULL, "group" VARCHAR(50) NOT NULL, 
+                                section VARCHAR(50), father VARCHAR(255), mother VARCHAR(255), dob VARCHAR(50), 
+                                phone VARCHAR(20), religion VARCHAR(50), year VARCHAR(10), session VARCHAR(50), 
+                                photo VARCHAR(500), optional_subjects VARCHAR(50), created_at DATETIME, 
+                                student_submitted BOOLEAN DEFAULT 0, photo_base64 TEXT DEFAULT '', 
+                                humanities_main_subjects VARCHAR(100) DEFAULT '', PRIMARY KEY (id)
+                            );
+                        '''))
+                        _conn.execute(_text('INSERT INTO students_new SELECT id, name, roll, reg, cls, "group", section, father, mother, dob, phone, religion, year, session, photo, optional_subjects, created_at, student_submitted, photo_base64, humanities_main_subjects FROM students;'))
+                        _conn.execute(_text("DROP TABLE students;"))
+                        _conn.execute(_text("ALTER TABLE students_new RENAME TO students;"))
+                        _conn.execute(_text('CREATE INDEX IF NOT EXISTS ix_students_roll_cls_group ON students (roll, cls, "group", session);'))
+                        _conn.commit()
+                        _conn.execute(_text("PRAGMA foreign_keys = ON;"))
+                        print("[DB] SQLite legacy UNIQUE (roll) constraint removed successfully.")
+                except Exception as _se:
+                    print(f"[DB] SQLite roll constraint check note: {_se}")
+
+            for _tbl, _col, _col_def in _COLUMN_MIGRATIONS:
+                try:
+                    if app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('postgresql'):
+                        _conn.execute(_text(f"ALTER TABLE {_tbl} ADD COLUMN IF NOT EXISTS {_col} {_col_def};"))
+                    else:
+                        _conn.execute(_text(f"ALTER TABLE {_tbl} ADD COLUMN {_col} {_col_def};"))
+                    _conn.commit()
+                    print(f"[DB] Column migration OK: {_tbl}.{_col}")
+                except Exception as _me:
                     try:
                         _conn.rollback()
                     except Exception:
                         pass
 
-                for _tbl, _col, _col_def in _COLUMN_MIGRATIONS:
-                    try:
-                        _conn.execute(_text(
-                            f"ALTER TABLE {_tbl} ADD COLUMN IF NOT EXISTS {_col} {_col_def};"
-                        ))
-                        _conn.commit()
-                        print(f"[DB] Column migration OK: {_tbl}.{_col}")
-                    except Exception as _me:
-                        print(f"[DB] Column migration skipped ({_tbl}.{_col}): {_me}")
-                        try:
-                            _conn.rollback()
-                        except Exception:
-                            pass
-
-                # Ensure photo column is TEXT type in both students and archive tables
+            # Ensure photo column is TEXT type in PostgreSQL
+            if app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('postgresql'):
                 for _tbl in ["students", "archive"]:
                     try:
                         _conn.execute(_text(f"ALTER TABLE {_tbl} ALTER COLUMN photo TYPE TEXT;"))
                         _conn.commit()
-                        print(f"[DB] Altered photo column to TEXT type OK: {_tbl}")
-                    except Exception as _pe:
-                        print(f"[DB] Alter photo column to TEXT skipped ({_tbl}): {_pe}")
+                    except Exception:
                         try:
                             _conn.rollback()
                         except Exception:
                             pass
-        else:
-            print("[DB] Schema up to date. Skipping startup DDL migrations.")
+    except Exception as _m_err:
+        print(f"[DB] WARNING: Column migrations skipped: {_m_err}")
 
 # ─────────────────────────────────────────────
 # Credentials — read from .env; never hard-coded
@@ -249,13 +317,16 @@ def _delete_photo_file(photo_url: str):
 # ─────────────────────────────────────────────
 # Serve static files
 # ─────────────────────────────────────────────
-@app.route('/photos/<path:filename>')
+@app.route('/photos/<string:filename>')
 def serve_photo(filename):
-    filepath = os.path.join(PHOTOS_DIR, filename)
+    safe_name = secure_filename(filename)
+    if not safe_name or safe_name != filename:
+        abort(400)
+    filepath = os.path.join(PHOTOS_DIR, safe_name)
+    student_id = safe_name.split('.')[0]
     if not os.path.exists(filepath):
         # File missing on disk (e.g., ephemeral hosting container restart).
         # Lazy-restore from DB photo_base64
-        student_id = filename.split('.')[0]
         student = Student.query.filter_by(id=student_id).first()
         b64_data = ''
         if student and student.photo_base64:
@@ -264,6 +335,10 @@ def serve_photo(filename):
             archived = Archive.query.filter_by(id=student_id).first()
             if archived and archived.photo_base64:
                 b64_data = archived.photo_base64
+            else:
+                admission_app = AdmissionApplication.query.filter_by(application_no=student_id).first()
+                if admission_app and admission_app.photo_base64:
+                    b64_data = admission_app.photo_base64
         
         if b64_data and b64_data.startswith('data:'):
             try:
@@ -274,7 +349,7 @@ def serve_photo(filename):
             except Exception:
                 pass
 
-    return send_from_directory(PHOTOS_DIR, filename)
+    return send_from_directory(PHOTOS_DIR, safe_name)
 
 
 # ─────────────────────────────────────────────
@@ -288,14 +363,18 @@ def _serve_html(name, inject_api=True):
     with open(html_path, 'r', encoding='utf-8') as f:
         html = f.read()
 
-    # Inject Arial font globally for all served HTML pages
-    font_inject = (
-        '<style> * { font-family: Arial, sans-serif !important; } </style>\n'
-    )
-    html = html.replace('</head>', font_inject + '</head>', 1)
 
     if inject_api:
-        inject = '<script>window.USE_API = true; window.API_BASE = "";</script>'
+        inject = (
+            '<script>'
+            'window.USE_API = true; window.API_BASE = "";'
+            'window.escHtml = function(s) {'
+            '  if (s == null) return "";'
+            '  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;")'
+            '    .replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/\'/g,"&#39;");'
+            '};'
+            '</script>'
+        )
         html = html.replace('</head>', inject + '\n</head>', 1)
     return Response(html, mimetype='text/html')
 
@@ -385,13 +464,36 @@ def student_portal_page():
     """Public student self-service portal — no authentication required."""
     return _serve_html('student-portal.html', inject_api=False)
 
+@app.route('/admission', methods=['GET', 'POST'])
+def admission_portal_page():
+    """Public admission application page — no authentication required."""
+    return _serve_html('admission.html', inject_api=True)
+
+@app.route('/admission.html', methods=['GET', 'POST'])
+def admission_page_route():
+    """Public admission application page — no authentication required."""
+    return _serve_html('admission.html', inject_api=True)
+
+@app.route('/admission-admin.html')
+def admission_admin_page():
+    """Admin admission submissions management page."""
+    if not session.get('authenticated'):
+        return redirect('/login')
+    return _serve_html('admission-admin.html', inject_api=True)
+
+@app.route('/application-copy')
+@app.route('/application-copy.html')
+def application_copy_page():
+    """Public printable admission application copy — student can view/print their admission form."""
+    return _serve_html('application-copy.html', inject_api=True)
+
 @app.route('/<path:page>')
 def html_pages(page):
     # Only serve .html files from BASE_DIR; prevent directory traversal
     if not page.endswith('.html') or '/' in page or '..' in page:
         abort(404)
     # Auth-gate any .html page that is not the login or student-portal page
-    if page not in ('login.html', 'student-portal.html', 'result_summery.html', 'std_result_view.html') and not session.get('authenticated'):
+    if page not in ('login.html', 'student-portal.html', 'result_summery.html', 'std_result_view.html', 'admission.html', 'application-copy.html') and not session.get('authenticated'):
         return redirect('/login')
     # Use _serve_html to ensure the global font and API scripts are correctly injected
     return _serve_html(page, inject_api=(page not in ('login.html', 'student-portal.html', 'result_summery.html', 'std_result_view.html')))
@@ -913,50 +1015,59 @@ def get_group_results():
 # ─────────────────────────────────────────────
 # HEALTH CHECK  (no auth — for deployment diagnosis)
 # ─────────────────────────────────────────────
+# ─────────────────────────────────────────────
+# HEALTH CHECK
+# ─────────────────────────────────────────────
 @app.route('/api/health', methods=['GET'])
 def health_check():
-    db_ok = False
-    db_info = {}
+    """Public health check — returns only pass/fail. No internal details."""
     try:
         from sqlalchemy import text
         with db.engine.connect() as conn:
             conn.execute(text('SELECT 1'))
-        student_count = Student.query.count()
-        teacher_count = Teacher.query.count()
-        marks_count = Mark.query.count()
-        db_ok = True
-        safe_url = _db_url.split('@')[-1] if '@' in _db_url else _db_url
-        db_info = {
-            'connected': True,
-            'host': safe_url,
-            'students': student_count,
-            'teachers': teacher_count,
-            'marks_entries': marks_count,
-        }
-    except Exception as e:
-        db_info = {'connected': False, 'error': str(e)}
+        return jsonify({'ok': True, 'status': 'healthy'}), 200
+    except Exception:
+        return jsonify({'ok': False, 'status': 'unhealthy'}), 503
 
-    return jsonify({
-        'ok': db_ok,
-        'status': 'healthy' if db_ok else 'unhealthy',
-        'database': db_info,
-        'version': '1.0.0',
-        'timestamp': datetime.utcnow().isoformat() + 'Z',
-    }), 200 if db_ok else 503
+
+@app.route('/api/health/detail', methods=['GET'])
+@require_admin
+def health_check_detail():
+    """Admin-only detailed health check."""
+    try:
+        from sqlalchemy import text
+        with db.engine.connect() as conn:
+            conn.execute(text('SELECT 1'))
+        safe_url = _db_url.split('@')[-1] if '@' in _db_url else _db_url
+        return jsonify({
+            'ok': True,
+            'status': 'healthy',
+            'database': {
+                'connected': True,
+                'host': safe_url,
+                'students': Student.query.count(),
+                'teachers': Teacher.query.count(),
+                'marks_entries': Mark.query.count(),
+            },
+            'version': '1.0.0',
+            'timestamp': datetime.utcnow().isoformat() + 'Z',
+        }), 200
+    except Exception as e:
+        return jsonify({'ok': False, 'status': 'unhealthy', 'error': str(e)}), 503
 
 
 # ─────────────────────────────────────────────
 # AUTH
 # ─────────────────────────────────────────────
 @app.route('/api/login', methods=['POST'])
+@limiter.limit("10 per minute")
 def login():
     body = request.get_json(force=True, silent=True) or {}
     uid = body.get('uid', '').strip()
     pw = body.get('pw', '')
 
-    # Admin Logic: User mentioned "one password only" for admin. 
-    # We'll allow admin to login with just the password OR with the admin UID + PW.
-    if pw == ADMIN_PW:
+    # Admin Login: BOTH UID and password required
+    if uid == ADMIN_UID and pw == ADMIN_PW:
         session['authenticated'] = True
         session['role'] = 'admin'
         session.permanent = False
@@ -1085,8 +1196,577 @@ def student_portal_submit(sid):
 
 
 # ─────────────────────────────────────────────
+# ADMISSION SYSTEM  (/api/admission/*)
+# ─────────────────────────────────────────────
+
+def _generate_application_no():
+    """Generate unique application number formatted as ADM-YYYY-XXXX."""
+    curr_year = datetime.utcnow().strftime('%Y')
+    prefix = f"ADM-{curr_year}-"
+    last_app = AdmissionApplication.query.filter(
+        AdmissionApplication.application_no.like(f"{prefix}%")
+    ).order_by(AdmissionApplication.id.desc()).first()
+
+    seq = 1
+    if last_app and last_app.application_no.startswith(prefix):
+        try:
+            seq = int(last_app.application_no.split('-')[-1]) + 1
+        except Exception:
+            seq = AdmissionApplication.query.count() + 1
+    else:
+        seq = AdmissionApplication.query.count() + 1
+
+    app_no = f"{prefix}{seq:04d}"
+    while AdmissionApplication.query.filter_by(application_no=app_no).first():
+        seq += 1
+        app_no = f"{prefix}{seq:04d}"
+    return app_no
+
+
+def _get_next_serial_roll(cls_val, group_val, session_val):
+    """
+    Auto-generate the next serial roll number for the given class, group, and session.
+    Standard Group Starting Ranges:
+      - Science: 01, 02, ... (leading 0 for < 10)
+      - Humanities: 201, 202, ...
+      - Business Studies: 701, 702, ...
+      - Others: 1, 2, ...
+    Roll increments sequentially from the highest existing roll for this class + group + session.
+    """
+    students = Student.query.filter_by(
+        cls=cls_val,
+        group=group_val
+    ).filter(
+        (Student.session == session_val) | (Student.year == session_val)
+    ).all()
+
+    numeric_rolls = []
+    for s in students:
+        try:
+            numeric_rolls.append(int(s.roll))
+        except (ValueError, TypeError):
+            pass
+
+    grp_lower = (group_val or '').lower()
+    if grp_lower.startswith('hum'):
+        base = 201
+    elif grp_lower.startswith('bus'):
+        base = 701
+    elif grp_lower.startswith('sci'):
+        base = 1
+    else:
+        base = 1
+
+    if numeric_rolls:
+        next_num = max(numeric_rolls) + 1
+        if next_num < base:
+            next_num = base
+    else:
+        next_num = base
+
+    # Ensure roll number uniqueness loop
+    while True:
+        if grp_lower.startswith('sci') and next_num < 10:
+            candidate_roll = f"{next_num:02d}"
+        else:
+            candidate_roll = str(next_num)
+
+        exists = Student.query.filter_by(
+            roll=candidate_roll,
+            cls=cls_val,
+            group=group_val
+        ).filter(
+            (Student.session == session_val) | (Student.year == session_val)
+        ).first()
+
+        if not exists:
+            return candidate_roll
+        next_num += 1
+
+
+@app.route('/api/admission/next-roll', methods=['GET'])
+@require_auth
+def get_next_admission_roll():
+    """Admin endpoint: preview next auto-generated roll for class, group, and session."""
+    cls_val = (request.args.get('cls') or '').strip()
+    group_val = (request.args.get('group') or '').strip()
+    session_val = (request.args.get('session') or '').strip().replace('–', '-').replace('\u2013', '-')
+    if not cls_val or not group_val:
+        return jsonify({'ok': False, 'message': 'Class and Group/Department are required'}), 400
+    roll = _get_next_serial_roll(cls_val, group_val, session_val)
+    return jsonify({'ok': True, 'roll': roll})
+
+
+@app.route('/api/admission/apply', methods=['POST'])
+@limiter.limit("100 per hour")
+def submit_admission_application():
+    """
+    Public endpoint: submit admission application without prior authentication.
+    Generates unique application number and saves to admission_applications table.
+    """
+    body = request.get_json(force=True, silent=True) or {}
+
+    name = (body.get('name') or '').strip()
+    cls_val = (body.get('cls') or '').strip()
+    group_val = (body.get('group') or '').strip()
+    session_val = (body.get('session') or body.get('year') or '').strip().replace('–', '-').replace('\u2013', '-')
+    phone_val = (body.get('phone') or '').strip()
+
+    if not name or not cls_val or not group_val:
+        return jsonify({'ok': False, 'message': 'Student Name, Class, and Group/Department are required.'}), 400
+
+    if not session_val:
+        session_val = f"{datetime.utcnow().year}-{datetime.utcnow().year + 1}"
+
+    # Field length validation
+    _adm_max_lengths = {
+        'name': 255, 'father': 255, 'mother': 255, 'roll': 50, 'reg': 50,
+        'phone': 20, 'guardian_phone': 20, 'guardian_name': 255, 'address': 1000,
+        'ssc_roll': 50, 'ssc_reg': 50, 'ssc_gpa': 10, 'ssc_passing_year': 10,
+        'religion': 50, 'nationality': 50,
+    }
+    for field_name, max_len in _adm_max_lengths.items():
+        val = body.get(field_name)
+        if val and isinstance(val, str) and len(val.strip()) > max_len:
+            clean_label = field_name.replace("_", " ").title()
+            return jsonify({'ok': False, 'message': f'{clean_label} exceeds maximum length of {max_len} characters.'}), 400
+
+    # Duplicate detection: Block duplicate applications with same phone number in same session
+    if phone_val:
+        existing_dup = AdmissionApplication.query.filter_by(
+            phone=phone_val,
+            session=session_val
+        ).first()
+        if existing_dup:
+            return jsonify({
+                'ok': False,
+                'message': f'An application with mobile number "{phone_val}" has already been submitted for session {session_val} (Application No: {existing_dup.application_no}). Please use "Track Application Status" to check your status.'
+            }), 409
+
+    photo_b64 = body.get('photo', '')
+    optional_sub = (body.get('optional_subject') or body.get('optionalSubjects') or '').strip()
+    humanities_main = (body.get('humanities_main_subjects') or body.get('humanitiesMainSubjects') or '').strip()
+
+    # Retry loop for application generation to prevent race condition collision
+    max_retries = 3
+    for attempt in range(max_retries):
+        app_no = _generate_application_no()
+        photo_url = ''
+        if photo_b64 and photo_b64.startswith('data:'):
+            photo_url = _save_photo_file(app_no, photo_b64)
+
+        application = AdmissionApplication(
+            application_no=app_no,
+            name=name,
+            roll=(body.get('roll') or '').strip(),
+            reg=(body.get('reg') or '').strip(),
+            cls=cls_val,
+            group=group_val,
+            section=(body.get('section') or '').strip(),
+            father=(body.get('father') or '').strip(),
+            mother=(body.get('mother') or '').strip(),
+            dob=(body.get('dob') or '').strip(),
+            phone=phone_val,
+            religion=(body.get('religion') or '').strip(),
+            year=(body.get('year') or '').strip(),
+            session=session_val,
+            photo=photo_url,
+            photo_base64=photo_b64 if photo_b64 and photo_b64.startswith('data:') else '',
+            optional_subjects=optional_sub,
+            humanities_main_subjects=humanities_main,
+            gender=(body.get('gender') or '').strip(),
+            blood_group=(body.get('blood_group') or body.get('bloodGroup') or '').strip(),
+            nationality=(body.get('nationality') or 'Bangladeshi').strip(),
+            address=(body.get('address') or '').strip(),
+            guardian_name=(body.get('guardian_name') or body.get('guardianName') or '').strip(),
+            guardian_phone=(body.get('guardian_phone') or body.get('guardianPhone') or '').strip(),
+            ssc_roll=(body.get('ssc_roll') or body.get('sscRoll') or '').strip(),
+            ssc_reg=(body.get('ssc_reg') or body.get('sscReg') or '').strip(),
+            ssc_board=(body.get('ssc_board') or body.get('sscBoard') or '').strip(),
+            ssc_gpa=(body.get('ssc_gpa') or body.get('sscGpa') or '').strip(),
+            ssc_passing_year=(body.get('ssc_passing_year') or body.get('sscPassingYear') or '').strip(),
+            ssc_group=(body.get('ssc_group') or body.get('sscGroup') or '').strip(),
+            status='pending',
+            submitted_at=datetime.utcnow(),
+        )
+
+        db.session.add(application)
+        try:
+            db.session.commit()
+            return jsonify({
+                'ok': True,
+                'message': 'Application submitted successfully',
+                'applicationNo': app_no,
+                'data': application.to_dict()
+            }), 201
+        except Exception as e:
+            db.session.rollback()
+            if attempt < max_retries - 1:
+                continue
+            return jsonify({'ok': False, 'message': f'Failed to submit application: {str(e)}'}), 500
+
+
+@app.route('/api/admission/status/<string:app_no>', methods=['GET'])
+def get_admission_status(app_no):
+    """
+    Public endpoint: check admission application status by application number.
+    Returns status and basic application details for the student.
+    """
+    clean_no = app_no.strip()
+    app_record = AdmissionApplication.query.filter_by(application_no=clean_no).first()
+    if not app_record:
+        return jsonify({'ok': False, 'message': f'No application found with Application Number "{clean_no}".'}), 404
+
+    return jsonify({
+        'ok': True,
+        'data': app_record.to_dict()
+    })
+
+
+@app.route('/api/admission/applications', methods=['GET'])
+@require_auth
+def list_admission_applications():
+    """
+    Admin endpoint: list all admission applications with optional filtering.
+    Filters: status, cls, group, session, q (search).
+    """
+    status_filter = (request.args.get('status') or '').strip().lower()
+    cls_filter = (request.args.get('cls') or '').strip()
+    group_filter = (request.args.get('group') or '').strip()
+    session_val = (request.args.get('session') or '').strip().replace('–', '-').replace('\u2013', '-')
+    q = (request.args.get('q') or '').strip().lower()
+
+    query = AdmissionApplication.query
+
+    if status_filter and status_filter != 'all':
+        query = query.filter(AdmissionApplication.status == status_filter)
+    if cls_filter:
+        query = query.filter(AdmissionApplication.cls == cls_filter)
+    if group_filter:
+        query = query.filter(AdmissionApplication.group == group_filter)
+    if session_val:
+        query = query.filter(AdmissionApplication.session == session_val)
+
+    if q:
+        search_pattern = f"%{q}%"
+        query = query.filter(
+            AdmissionApplication.application_no.ilike(search_pattern) |
+            AdmissionApplication.name.ilike(search_pattern) |
+            AdmissionApplication.phone.ilike(search_pattern) |
+            AdmissionApplication.roll.ilike(search_pattern) |
+            AdmissionApplication.ssc_roll.ilike(search_pattern)
+        )
+
+    records = query.order_by(AdmissionApplication.id.desc()).all()
+
+    # Get overall counts
+    total_cnt = AdmissionApplication.query.count()
+    pending_cnt = AdmissionApplication.query.filter_by(status='pending').count()
+    approved_cnt = AdmissionApplication.query.filter_by(status='approved').count()
+    rejected_cnt = AdmissionApplication.query.filter_by(status='rejected').count()
+
+    return jsonify({
+        'ok': True,
+        'data': [r.to_dict() for r in records],
+        'counts': {
+            'total': total_cnt,
+            'pending': pending_cnt,
+            'approved': approved_cnt,
+            'rejected': rejected_cnt
+        }
+    })
+
+
+@app.route('/api/admission/applications/<int:app_id>', methods=['GET'])
+@require_auth
+def get_admission_application(app_id):
+    """Admin endpoint: get detailed application by ID."""
+    app_record = db.session.get(AdmissionApplication, app_id)
+    if not app_record:
+        return jsonify({'ok': False, 'message': 'Application not found'}), 404
+    return jsonify({'ok': True, 'data': app_record.to_dict()})
+
+
+@app.route('/api/admission/applications/<int:app_id>', methods=['PUT'])
+@require_auth
+def update_admission_application(app_id):
+    """Admin endpoint: edit application data before or after review."""
+    app_record = db.session.get(AdmissionApplication, app_id)
+    if not app_record:
+        return jsonify({'ok': False, 'message': 'Application not found'}), 404
+
+    body = request.get_json(force=True, silent=True) or {}
+
+    # Update allowed fields
+    field_mappings = [
+        ('name', 'name'),
+        ('roll', 'roll'),
+        ('reg', 'reg'),
+        ('cls', 'cls'),
+        ('group', 'group'),
+        ('section', 'section'),
+        ('father', 'father'),
+        ('mother', 'mother'),
+        ('dob', 'dob'),
+        ('phone', 'phone'),
+        ('religion', 'religion'),
+        ('year', 'year'),
+        ('session', 'session'),
+        ('gender', 'gender'),
+        ('blood_group', 'blood_group'),
+        ('nationality', 'nationality'),
+        ('address', 'address'),
+        ('guardian_name', 'guardian_name'),
+        ('guardian_phone', 'guardian_phone'),
+        ('ssc_roll', 'ssc_roll'),
+        ('ssc_reg', 'ssc_reg'),
+        ('ssc_board', 'ssc_board'),
+        ('ssc_gpa', 'ssc_gpa'),
+        ('ssc_passing_year', 'ssc_passing_year'),
+        ('ssc_group', 'ssc_group'),
+        ('admin_remarks', 'admin_remarks'),
+    ]
+
+    for body_key, attr_name in field_mappings:
+        if body_key in body:
+            val = body[body_key]
+            if isinstance(val, str):
+                val = val.strip()
+            setattr(app_record, attr_name, val)
+
+    # CamelCase aliases
+    if 'bloodGroup' in body:
+        app_record.blood_group = (body['bloodGroup'] or '').strip()
+    if 'guardianName' in body:
+        app_record.guardian_name = (body['guardianName'] or '').strip()
+    if 'guardianPhone' in body:
+        app_record.guardian_phone = (body['guardianPhone'] or '').strip()
+    if 'sscRoll' in body:
+        app_record.ssc_roll = (body['sscRoll'] or '').strip()
+    if 'sscReg' in body:
+        app_record.ssc_reg = (body['sscReg'] or '').strip()
+    if 'sscBoard' in body:
+        app_record.ssc_board = (body['sscBoard'] or '').strip()
+    if 'sscGpa' in body:
+        app_record.ssc_gpa = (body['sscGpa'] or '').strip()
+    if 'sscPassingYear' in body:
+        app_record.ssc_passing_year = (body['sscPassingYear'] or '').strip()
+    if 'sscGroup' in body:
+        app_record.ssc_group = (body['sscGroup'] or '').strip()
+    if 'adminRemarks' in body:
+        app_record.admin_remarks = (body['adminRemarks'] or '').strip()
+    if 'optionalSubjects' in body:
+        app_record.optional_subjects = (body['optionalSubjects'] or '').strip()
+    elif 'optional_subject' in body:
+        app_record.optional_subjects = (body['optional_subject'] or '').strip()
+    if 'humanitiesMainSubjects' in body:
+        app_record.humanities_main_subjects = (body['humanitiesMainSubjects'] or '').strip()
+    elif 'humanities_main_subjects' in body:
+        app_record.humanities_main_subjects = (body['humanities_main_subjects'] or '').strip()
+
+    # Update photo if new base64 provided
+    photo_b64 = body.get('photo', '')
+    if photo_b64 and photo_b64.startswith('data:'):
+        _delete_photo_file(app_record.photo)
+        app_record.photo_base64 = photo_b64
+        new_url = _save_photo_file(app_record.application_no, photo_b64)
+        if new_url:
+            app_record.photo = new_url
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'ok': False, 'message': f'Failed to update application: {str(e)}'}), 500
+
+    return jsonify({'ok': True, 'message': 'Application updated successfully', 'data': app_record.to_dict()})
+
+
+@app.route('/api/admission/applications/<int:app_id>/approve', methods=['POST'])
+@require_auth
+def approve_admission_application(app_id):
+    """
+    Admin endpoint: approve admission application and transfer student data to main student database.
+    Transfers data organized by class, group (department), session, and roll number.
+    """
+    app_record = db.session.get(AdmissionApplication, app_id)
+    if not app_record:
+        return jsonify({'ok': False, 'message': 'Application not found'}), 404
+
+    if app_record.status == 'approved':
+        return jsonify({
+            'ok': False,
+            'message': 'This application has already been approved and enrolled.'
+        }), 409
+
+    body = request.get_json(force=True, silent=True) or {}
+
+    # Target assignment fields (admin can override during approval)
+    target_cls = (body.get('cls') or app_record.cls or '').strip()
+    target_group = (body.get('group') or app_record.group or '').strip()
+    target_session = (body.get('session') or app_record.session or app_record.year or '').strip().replace('–', '-').replace('\u2013', '-')
+    target_section = (body.get('section') if 'section' in body else app_record.section or '').strip()
+    target_roll = (body.get('roll') or app_record.roll or '').strip()
+
+    if not target_cls or not target_group:
+        return jsonify({'ok': False, 'message': 'Class and Group/Department are required for approval.'}), 400
+
+    # Auto-generate next serial roll number for this class + group + session if not assigned
+    if not target_roll:
+        target_roll = _get_next_serial_roll(target_cls, target_group, target_session)
+
+    # Verify roll uniqueness within class + group + session
+    existing = Student.query.filter_by(
+        roll=target_roll,
+        cls=target_cls,
+        group=target_group,
+    ).filter(
+        (Student.session == target_session) | (Student.year == target_session)
+    ).first()
+
+    if existing:
+        return jsonify({
+            'ok': False,
+            'message': f'Roll number "{target_roll}" already exists in {target_cls} ({target_group}) for session {target_session}. Please assign a unique roll number.'
+        }), 409
+
+    # Generate unique student ID (16 hex chars, matching existing system)
+    student_id = str(uuid.uuid4().hex[:16])
+
+    # Handle photo transfer
+    student_photo_url = ''
+    student_photo_b64 = app_record.photo_base64 or ''
+    if student_photo_b64 and student_photo_b64.startswith('data:'):
+        student_photo_url = _save_photo_file(student_id, student_photo_b64)
+    elif app_record.photo:
+        student_photo_url = app_record.photo
+
+    # Clean up old admission photo file if re-saved with student_id
+    if app_record.photo and student_photo_url and app_record.photo != student_photo_url and app_record.application_no in app_record.photo:
+        _delete_photo_file(app_record.photo)
+
+    # Create Student in main database
+    new_student = Student(
+        id=student_id,
+        name=app_record.name,
+        roll=target_roll,
+        reg=app_record.reg or '',
+        cls=target_cls,
+        group=target_group,
+        section=target_section,
+        father=app_record.father or '',
+        mother=app_record.mother or '',
+        dob=app_record.dob or '',
+        phone=app_record.phone or '',
+        religion=app_record.religion or '',
+        year=app_record.year or (target_session.split('-')[0] if '-' in target_session else target_session),
+        session=target_session,
+        photo=student_photo_url,
+        photo_base64=student_photo_b64,
+        optional_subjects=app_record.optional_subjects or '',
+        humanities_main_subjects=app_record.humanities_main_subjects or '',
+        student_submitted=True,
+    )
+
+    # Update application record
+    app_record.roll = target_roll
+    app_record.cls = target_cls
+    app_record.group = target_group
+    app_record.session = target_session
+    app_record.section = target_section
+    app_record.status = 'approved'
+    app_record.approved_student_id = student_id
+    app_record.reviewed_at = datetime.utcnow()
+    if 'adminRemarks' in body or 'admin_remarks' in body:
+        app_record.admin_remarks = (body.get('adminRemarks') or body.get('admin_remarks') or '').strip()
+
+    db.session.add(new_student)
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'ok': False, 'message': f'Failed to approve application: {str(e)}'}), 500
+
+    return jsonify({
+        'ok': True,
+        'message': f'Application approved successfully! Student {new_student.name} enrolled with Roll {target_roll}.',
+        'student': new_student.to_dict(),
+        'application': app_record.to_dict()
+    })
+
+
+@app.route('/api/admission/applications/<int:app_id>/reject', methods=['POST'])
+@require_auth
+def reject_admission_application(app_id):
+    """Admin endpoint: mark application as rejected with optional remarks."""
+    app_record = db.session.get(AdmissionApplication, app_id)
+    if not app_record:
+        return jsonify({'ok': False, 'message': 'Application not found'}), 404
+
+    body = request.get_json(force=True, silent=True) or {}
+    remarks = (body.get('remarks') or body.get('adminRemarks') or body.get('admin_remarks') or '').strip()
+
+    # If previously approved, remove enrolled student from main database
+    if app_record.approved_student_id:
+        enrolled_student = db.session.get(Student, app_record.approved_student_id)
+        if enrolled_student:
+            if enrolled_student.photo and app_record.approved_student_id in enrolled_student.photo:
+                _delete_photo_file(enrolled_student.photo)
+            db.session.delete(enrolled_student)
+        app_record.approved_student_id = ''
+
+    app_record.status = 'rejected'
+    if remarks:
+        app_record.admin_remarks = remarks
+    app_record.reviewed_at = datetime.utcnow()
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'ok': False, 'message': f'Failed to reject application: {str(e)}'}), 500
+
+    return jsonify({
+        'ok': True,
+        'message': 'Application marked as rejected.',
+        'data': app_record.to_dict()
+    })
+
+
+@app.route('/api/admission/applications/<int:app_id>', methods=['DELETE'])
+@require_auth
+def delete_admission_application(app_id):
+    """Admin endpoint: delete an application."""
+    app_record = db.session.get(AdmissionApplication, app_id)
+    if not app_record:
+        return jsonify({'ok': False, 'message': 'Application not found'}), 404
+
+    # If application was approved and student exists in database, delete student as well
+    if app_record.approved_student_id:
+        enrolled_student = db.session.get(Student, app_record.approved_student_id)
+        if enrolled_student:
+            if enrolled_student.photo and app_record.approved_student_id in enrolled_student.photo:
+                _delete_photo_file(enrolled_student.photo)
+            db.session.delete(enrolled_student)
+
+    # If photo exists on disk and is named after this application, remove it
+    if app_record.photo and app_record.application_no in app_record.photo:
+        _delete_photo_file(app_record.photo)
+
+    db.session.delete(app_record)
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'ok': False, 'message': f'Failed to delete application: {str(e)}'}), 500
+
+    return jsonify({'ok': True, 'message': 'Application deleted successfully.'})
+
+
+# ─────────────────────────────────────────────
 # STUDENTS  (/api/students)
 # ─────────────────────────────────────────────
+
 @app.route('/api/students', methods=['GET'])
 @require_auth
 def get_students():
@@ -1131,9 +1811,28 @@ def add_student():
         if not body.get(field):
             return jsonify({'ok': False, 'message': f'Field "{field}" is required'}), 400
 
-    # Check if roll already exists
-    if Student.query.filter_by(roll=body['roll']).first():
-        return jsonify({'ok': False, 'message': 'A student with this roll number already exists'}), 409
+    # Input length validation (ISSUE-024)
+    _MAX_LENGTHS = {
+        'name': 255, 'roll': 50, 'reg': 50, 'cls': 50, 'group': 50,
+        'section': 50, 'father': 255, 'mother': 255, 'dob': 50,
+        'phone': 20, 'religion': 50, 'year': 10, 'session': 50,
+    }
+    for _field, _max_len in _MAX_LENGTHS.items():
+        _val = body.get(_field, '')
+        if _val and len(str(_val)) > _max_len:
+            return jsonify({'ok': False, 'message': f'Field "{_field}" exceeds maximum length of {_max_len} characters'}), 400
+
+    # Scope roll uniqueness check to same class, group and session (ISSUE-011)
+    _session_val = (body.get('session') or body.get('year') or '').strip().replace('–', '-').replace('\u2013', '-')
+    _existing = Student.query.filter_by(
+        roll=body['roll'],
+        cls=body['cls'],
+        group=body['group'],
+    ).filter(
+        (Student.session == _session_val) | (Student.year == _session_val)
+    ).first()
+    if _existing:
+        return jsonify({'ok': False, 'message': f'Roll {body["roll"]} already exists in {body["cls"]} / {body["group"]} for session {_session_val}'}), 409
 
     student_id   = str(uuid.uuid4().hex[:16])
     photo_b64    = body.get('photo', '')
@@ -1395,14 +2094,21 @@ def import_students():
     if not import_list:
         return jsonify({'ok': False, 'message': 'No students provided'}), 400
 
-    existing_rolls = {s.roll for s in Student.query.all()}
+    # Scope roll uniqueness to (roll, cls, group, session) so the same roll in different years is allowed
+    existing_rolls = set()
+    for _s in db.session.query(Student.roll, Student.cls, Student.group, Student.session).all():
+        existing_rolls.add((_s[0], _s[1], _s[2], _s[3]))
     imported = skipped = 0
 
     for student_data in import_list:
         if not student_data.get('name') or not student_data.get('roll'):
             skipped += 1
             continue
-        if student_data['roll'] in existing_rolls:
+        _imp_roll = student_data['roll']
+        _imp_cls = student_data.get('cls', 'Class-XI')
+        _imp_group = student_data.get('group', 'Science')
+        _imp_session = (student_data.get('session') or student_data.get('year', '')).strip().replace('\u2013', '-').replace('\u2013', '-')
+        if (_imp_roll, _imp_cls, _imp_group, _imp_session) in existing_rolls:
             skipped += 1
             continue
 
@@ -1412,16 +2118,16 @@ def import_students():
             name=student_data.get('name', ''),
             roll=student_data.get('roll', ''),
             reg=student_data.get('reg', ''),
-            cls=student_data.get('cls', 'Class-XI'),
-            group=student_data.get('group', 'Science'),
+            cls=_imp_cls,
+            group=_imp_group,
             section=student_data.get('section', ''),
             father=student_data.get('father', ''),
             mother=student_data.get('mother', ''),
             dob=student_data.get('dob', ''),
             phone=student_data.get('phone', ''),
             religion=student_data.get('religion', ''),
-            year=student_data.get('year', '').strip().replace('–', '-').replace('\u2013', '-'),
-            session=student_data.get('session', student_data.get('year', '')).strip().replace('–', '-').replace('\u2013', '-'),
+            year=student_data.get('year', '').strip().replace('\u2013', '-').replace('\u2013', '-'),
+            session=_imp_session,
             photo='',
             optional_subjects=(
                 student_data.get('optional_subject') or
@@ -1436,7 +2142,7 @@ def import_students():
             ),
         )
         db.session.add(student)
-        existing_rolls.add(student_data['roll'])
+        existing_rolls.add((_imp_roll, _imp_cls, _imp_group, _imp_session))
         imported += 1
 
     try:
@@ -1615,7 +2321,7 @@ def add_teacher():
             return jsonify({'ok': False, 'message': f'Field "{field}" is required'}), 400
 
     teacher = Teacher(
-        id='T' + str(int(datetime.utcnow().timestamp() * 1000)),
+        id='T' + uuid.uuid4().hex[:14],
         name=body.get('name', ''),
         email=body.get('email', ''),
         phone=body.get('phone', ''),
@@ -1724,9 +2430,14 @@ def get_all_marks():
 @app.route('/api/marks', methods=['DELETE'])
 @require_admin
 def clear_all_marks():
+    count = Mark.query.count()
     Mark.query.delete()
-    db.session.commit()
-    return jsonify({'ok': True, 'message': 'All marks cleared'})
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'ok': False, 'message': f'Database error: {str(e)}'}), 500
+    return jsonify({'ok': True, 'message': f'All {count} mark records cleared'})
 
 
 @app.route('/api/marks/<sid>', methods=['GET'])
@@ -2058,56 +2769,17 @@ def _public_result_summary_inner():
 
     # Merit position — sorted by GPA descending, then total marks descending as
     # tiebreaker, matching the Result-card.html front-end logic exactly.
-    # Uses the already-fetched peer marks to avoid extra DB queries / timeouts.
+    # Evaluates each peer using their own subject configuration.
     merit_pos   = None
     merit_total = len(peers)
     try:
         peer_scores = []
         for p in peers:
-            pm_all = (all_peer_marks.get(p.id) or {}).get(resolved_exam, {})
-            p_total   = 0
-            p_gpa_sum = 0.0
-            p_cnt     = 0
-            p_has_fail   = False
-            p_has_absent = False
-            for sub in subs:
-                _code = sub['code']
-                _m = pm_all.get(_code, {})
-                if not isinstance(_m, dict):
-                    continue
-                is_opt = _code in [c.strip() for c in (getattr(p, 'optional_subjects', '') or '').split('/') if c.strip()]
-                absent = _m.get('absent', False) or (
-                    (str(_m.get('cq', '')) == '' or _m.get('cq') is None) and
-                    (str(_m.get('mcq', '')) == '' or _m.get('mcq') is None)
-                )
-                if absent:
-                    if not is_opt:
-                        p_has_absent = True
-                    continue
-                _cq   = min(int(_m.get('cq')   or 0), sub.get('cqMax', 70))
-                _mcq  = min(int(_m.get('mcq')  or 0), sub.get('mcqMax', 30))
-                _prac = min(int(_m.get('prac') or 0), 25) if sub.get('hasPrac') else 0
-                _tot  = _cq + _mcq + _prac
-                p_total += _tot
-                _lg, _gp = _grade_letter(_tot)
-                _passed  = _subject_passed(_cq, _mcq, _prac,
-                                           bool(sub.get('hasPrac')),
-                                           sub.get('cqMax', 70),
-                                           sub.get('mcqMax', 30))
-                if not _passed:
-                    _gp = 0.0
-                    _lg = 'F'
-                if is_opt:
-                    if _gp > 2.0:
-                        p_gpa_sum += (_gp - 2.0)
-                else:
-                    p_gpa_sum += _gp
-                    p_cnt     += 1
-                    if _lg == 'F':
-                        p_has_fail = True
-            # GPA is 0 if any compulsory subject failed or student was absent
-            p_gpa = 0.0 if (p_has_fail or p_has_absent) else (
-                min(round(p_gpa_sum / p_cnt, 2), 5.0) if p_cnt else 0.0
+            p_total, p_gpa, _ = _compute_student_result(
+                p.id, all_peer_marks, getattr(p, "group", "Science") or "Science",
+                getattr(p, "optional_subjects", "") or "",
+                cls=getattr(p, "cls", "Class-XI") or "Class-XI",
+                exam_type=resolved_exam, student_obj=p
             )
             peer_scores.append((p.id, p_gpa, p_total))
         # Sort: GPA descending first, then total marks descending (same as Result-card.html)
@@ -2165,24 +2837,42 @@ def public_result_search():
     cls  = request.args.get('cls')
     grp  = request.args.get('group')
     roll = request.args.get('roll')
+    ses  = (request.args.get('session') or request.args.get('year') or '').strip().replace('\u2013', '-').replace('\u2013', '-')
 
     if not cls or not grp or not roll:
         return jsonify({'ok': False, 'message': 'Missing search parameters'}), 400
 
-    student = Student.query.filter_by(cls=cls, group=grp, roll=roll).first()
+    # Scope student lookup by session/year when provided to handle same roll across years
+    query = Student.query.filter_by(cls=cls, group=grp, roll=roll)
+    if ses:
+        query = query.filter(
+            (Student.session == ses) | (Student.year == ses)
+        )
+    student = query.first()
     if not student:
         return jsonify({'ok': False, 'message': 'Student not found with provided details.'}), 404
 
     # Get marks for this student
     marks_data = _get_marks_dict(student.id)
 
-    # Compute merit position (rank within same cls + group)
-    peers = Student.query.filter_by(cls=student.cls, group=student.group).all()
+    # Compute merit position (rank within same cls + group + session)
+    peer_query = Student.query.filter_by(cls=student.cls, group=student.group)
+    stu_session = (student.session or student.year or '').strip()
+    if stu_session:
+        peer_query = peer_query.filter(
+            (Student.session == stu_session) | (Student.year == stu_session)
+        )
+    peers = peer_query.all()
     peer_ids = [p.id for p in peers]
     all_marks = _get_marks_dict(peer_ids)
     peer_scores = []
     for peer in peers:
-        t, g, _ = _compute_student_result(peer.id, all_marks, peer.group, getattr(peer, "optional_subjects", "") or "")
+        t, g, _ = _compute_student_result(
+            peer.id, all_marks, getattr(peer, "group", "Science") or "Science",
+            getattr(peer, "optional_subjects", "") or "",
+            cls=getattr(peer, "cls", "Class-XI") or "Class-XI",
+            student_obj=peer
+        )
         peer_scores.append((peer.id, g, t))
     peer_scores.sort(key=lambda x: (-x[1], -x[2]))
     merit_position = next((i + 1 for i, ps in enumerate(peer_scores) if ps[0] == student.id), None)
@@ -2371,7 +3061,14 @@ def import_marks():
     if not isinstance(rows, list) or not rows:
         return jsonify({'ok': False, 'message': 'No mark rows provided'}), 400
 
-    roll_to_id = {s.roll: s.id for s in Student.query.all()}
+    # Build roll-to-id mapping keyed by (roll, cls, group) to avoid collisions
+    # when the same roll number exists across different classes/years.
+    _all_students = Student.query.all()
+    roll_cls_group_to_id = {}
+    roll_to_id_fallback = {}
+    for s in _all_students:
+        roll_cls_group_to_id[(s.roll, s.cls, s.group)] = s.id
+        roll_to_id_fallback[s.roll] = s.id  # fallback: last-wins (legacy compat)
     imported = skipped = 0
     warnings = []
 
@@ -2388,7 +3085,14 @@ def import_marks():
             skipped += 1
             continue
 
-        student_id = roll_to_id.get(roll)
+        # Try composite key first (cls + group from row), then fall back to roll-only
+        _row_cls = str(row.get('Class') or row.get('cls') or '').strip()
+        _row_grp = str(row.get('Group') or row.get('group') or '').strip()
+        student_id = None
+        if _row_cls and _row_grp:
+            student_id = roll_cls_group_to_id.get((roll, _row_cls, _row_grp))
+        if not student_id:
+            student_id = roll_to_id_fallback.get(roll)
         if not student_id:
             skipped += 1
             warnings.append(f'Student roll not found: {roll}')
@@ -2440,27 +3144,7 @@ def import_marks():
 @app.route('/api/marks/bulk-import', methods=['POST'])
 @require_auth
 def bulk_import_marks():
-    """Bulk import marks from the frontend Excel parser.
-
-    Expected JSON body:
-        {
-            "entries": [
-                {
-                    "studentId": "abc123",
-                    "examType":  "Annual",
-                    "year":      "2024–2025",
-                    "marks": {
-                        "101": {"cq":"65","mcq":"25","prac":"","ey":"2024–2025","year":"2024–2025"},
-                        "102": {"cq":"58","mcq":"22","prac":"","ey":"2024–2025","year":"2024–2025"},
-                        "selectedOptional": "scienceBio"
-                    }
-                },
-                ...
-            ]
-        }
-
-    All entries are saved to PostgreSQL in a single transaction.
-    """
+    """Bulk import marks from the frontend Excel parser."""
     body    = request.get_json(force=True, silent=True) or {}
     entries = body.get('entries', [])
 
@@ -2468,7 +3152,7 @@ def bulk_import_marks():
         return jsonify({'ok': False, 'message': 'No entries provided'}), 400
 
     # Pre-validate: collect all student IDs referenced
-    valid_student_ids = {s.id for s in Student.query.all()}
+    valid_student_ids = {r[0] for r in db.session.query(Student.id).all()}
 
     imported = 0
     skipped  = 0
@@ -3416,7 +4100,7 @@ def export_csv():
 # ANALYTICS — Promotion, Archive, Roll Gen, Detain, TC
 # ─────────────────────────────────────────────
 
-def _compute_student_result(sid, marks_data, group, optional_subject='', cls=None):
+def _compute_student_result(sid, marks_data, group, optional_subject='', cls=None, exam_type=None, student_obj=None):
     """Return (total_marks, gpa, passed) for a student given their marks dict.
     
     Uses optional_subject (e.g. '178/179') from the student record to determine
@@ -3427,11 +4111,22 @@ def _compute_student_result(sid, marks_data, group, optional_subject='', cls=Non
     if not all_exams:
         return 0, 0.0, False
 
-    exam_key  = list(all_exams.keys())[-1]
-    stu_marks = all_exams[exam_key]
+    if exam_type:
+        if exam_type in all_exams:
+            exam_key = exam_type
+        else:
+            return 0, 0.0, False
+    else:
+        exam_key = list(all_exams.keys())[-1]
 
-    if not cls or not optional_subject:
-        stu = Student.query.filter_by(id=sid).first()
+    stu_marks = all_exams.get(exam_key, {})
+    if not stu_marks:
+        return 0, 0.0, False
+
+    stu = student_obj
+    if not cls or not optional_subject or (group == 'Humanities' and not stu):
+        if not stu:
+            stu = Student.query.filter_by(id=sid).first()
         if stu:
             if not cls:
                 cls = stu.cls
@@ -3442,7 +4137,8 @@ def _compute_student_result(sid, marks_data, group, optional_subject='', cls=Non
 
     # Resolve subjects
     if group == 'Humanities':
-        stu = Student.query.filter_by(id=sid).first()
+        if not stu:
+            stu = Student.query.filter_by(id=sid).first()
         subs = _get_humanities_subject_list(stu, cls)
         if subs is None:
             subs = []
@@ -3550,7 +4246,7 @@ def analyze_promotion():
     eligible = []
 
     for stu in students:
-        total, gpa, passed = _compute_student_result(stu.id, marks, stu.group, getattr(stu, "optional_subjects", "") or "")
+        total, gpa, passed = _compute_student_result(stu.id, marks, stu.group, getattr(stu, "optional_subjects", "") or "", cls=stu.cls)
         data = stu.to_dict()
         data.update({
             'total_marks': total,
@@ -3588,28 +4284,35 @@ def execute_promotion():
 
     scored = []
     for stu in to_promote:
-        total, gpa, _ = _compute_student_result(stu.id, marks, stu.group, getattr(stu, "optional_subjects", "") or "")
+        total, gpa, _ = _compute_student_result(stu.id, marks, stu.group, getattr(stu, "optional_subjects", "") or "", cls=stu.cls)
         scored.append((stu, gpa, total))
     scored.sort(key=lambda x: (-x[1], -x[2]))
 
+    # Build set of existing Class-XII rolls scoped by (roll, group, session) for collision detection
     existing_xii_rolls = set()
     for s in students:
         if s.cls == 'Class-XII':
-            try:
-                existing_xii_rolls.add(int(s.roll))
-            except (ValueError, TypeError):
-                pass
+            existing_xii_rolls.add((s.roll, s.group, s.session or s.year))
 
-    next_roll = 1
     promoted_count = 0
     roll_assignments = []
 
     for stu, gpa, total in scored:
-        while next_roll in existing_xii_rolls:
-            next_roll += 1
-        roll_assignments.append((stu.id, str(next_roll), gpa, total))
-        existing_xii_rolls.add(next_roll)
-        next_roll += 1
+        stu_session = (stu.session or stu.year or '').strip()
+        # Try to keep the student's original roll number
+        if (stu.roll, stu.group, stu_session) not in existing_xii_rolls:
+            new_roll = stu.roll
+        else:
+            # Collision: generate a new sequential roll only as fallback
+            try:
+                next_num = int(stu.roll) + 1
+            except (ValueError, TypeError):
+                next_num = 1
+            while (str(next_num), stu.group, stu_session) in existing_xii_rolls:
+                next_num += 1
+            new_roll = str(next_num)
+        roll_assignments.append((stu.id, new_roll, gpa, total))
+        existing_xii_rolls.add((new_roll, stu.group, stu_session))
 
     student_map = {s.id: s for s in students}
     for sid, new_roll, gpa, total in roll_assignments:
@@ -3639,7 +4342,7 @@ def execute_promotion():
 
 
 @app.route('/api/archive-graduates', methods=['POST'])
-@require_auth
+@require_admin
 def archive_graduates():
     """Move passing Class-XII students to the archive."""
     students = Student.query.filter_by(cls='Class-XII').all()
@@ -3647,7 +4350,7 @@ def archive_graduates():
 
     to_archive = []
     for stu in students:
-        total, gpa, passed = _compute_student_result(stu.id, marks, stu.group, getattr(stu, "optional_subjects", "") or "")
+        total, gpa, passed = _compute_student_result(stu.id, marks, stu.group, getattr(stu, "optional_subjects", "") or "", cls=stu.cls)
         if passed and total > 0:
             db.session.add(Archive(
                 id=stu.id, name=stu.name, roll=stu.roll, reg=stu.reg,
@@ -3699,7 +4402,7 @@ def analyze_archive_candidates():
     candidates = []
 
     for stu in students:
-        total, gpa, passed = _compute_student_result(stu.id, marks, stu.group, getattr(stu, "optional_subjects", "") or "")
+        total, gpa, passed = _compute_student_result(stu.id, marks, stu.group, getattr(stu, "optional_subjects", "") or "", cls=stu.cls)
         if passed:
             data = stu.to_dict()
             data.update({'totalMarks': total, 'gpa': gpa, 'result': 'Pass'})
@@ -3722,7 +4425,7 @@ def generate_rolls():
     marks  = _get_marks_dict()
     scored = []
     for stu in students:
-        total, gpa, _ = _compute_student_result(stu.id, marks, stu.group, getattr(stu, "optional_subjects", "") or "")
+        total, gpa, _ = _compute_student_result(stu.id, marks, stu.group, getattr(stu, "optional_subjects", "") or "", cls=stu.cls)
         data = stu.to_dict()
         data.update({'gpa': gpa, 'totalMarks': total})
         scored.append(data)
@@ -3754,7 +4457,7 @@ def detain_list():
     detained = []
 
     for stu in students:
-        total, gpa, passed = _compute_student_result(stu.id, marks, stu.group, getattr(stu, "optional_subjects", "") or "")
+        total, gpa, passed = _compute_student_result(stu.id, marks, stu.group, getattr(stu, "optional_subjects", "") or "", cls=stu.cls)
         if not passed and total > 0:
             data = stu.to_dict()
             data.update({'total_marks': total, 'gpa': gpa, 'result': 'Fail'})
@@ -3774,11 +4477,33 @@ def re_enroll(sid):
         return jsonify({'ok': False, 'message': 'Student not found'}), 404
 
     new_year       = body.get('year', datetime.utcnow().strftime('%Y'))
+    new_session    = (str(new_year).strip().replace('\u2013', '-').replace('\u2013', '-'))
+
+    # Check for roll uniqueness in the target year before re-enrolling
+    _existing = Student.query.filter_by(
+        roll=student.roll,
+        cls='Class-XI',
+        group=student.group,
+    ).filter(
+        (Student.session == new_session) | (Student.year == new_session)
+    ).filter(
+        Student.id != sid
+    ).first()
+    if _existing:
+        return jsonify({
+            'ok': False,
+            'message': f'Roll {student.roll} already exists in Class-XI / {student.group} for session {new_session}. Please change the roll number first.'
+        }), 409
+
     student.year   = new_year
-    student.session = new_year
+    student.session = new_session
     student.cls    = 'Class-XI'
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'ok': False, 'message': f'Database error: {str(e)}'}), 500
     return jsonify({'ok': True, 'message': f'Student re-enrolled for {new_year}.',
                     'data': student.to_dict()})
 
@@ -3797,7 +4522,7 @@ def generate_certificate(sid):
         return jsonify({'ok': False, 'message': 'Student not found'}), 404
 
     marks           = _get_marks_dict()
-    total, gpa, passed = _compute_student_result(sid, marks, getattr(stu, "group", "Science"), getattr(stu, "optional_subjects", "") or "")
+    total, gpa, passed = _compute_student_result(sid, marks, getattr(stu, "group", "Science"), getattr(stu, "optional_subjects", "") or "", cls=getattr(stu, "cls", "Class-XII"))
 
     settings = {s.key: s.value for s in Setting.query.all()}
 
@@ -3835,11 +4560,10 @@ def method_not_allowed(e):
 
 @app.errorhandler(500)
 def server_error(e):
-    # Include real error detail so we can diagnose deployment issues.
-    # IMPORTANT: Remove the str(e) in production once the bug is confirmed fixed.
     import traceback
-    detail = str(e) if str(e) else repr(e)
-    return jsonify({'ok': False, 'message': f'Internal server error: {detail}'}), 500
+    import logging
+    logging.error(traceback.format_exc())
+    return jsonify({'ok': False, 'message': 'An internal error occurred. Please contact support.'}), 500
 
 
 # Run photo migrations: copy base64 from photo to photo_base64, save to file, and replace with URL
@@ -3912,4 +4636,5 @@ if __name__ == '__main__':
         print("  API Health:      http://localhost:5000/api/health")
         print("=" * 60)
 
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    debug_mode = os.environ.get('FLASK_DEBUG', 'false').lower() == 'true'
+    app.run(debug=debug_mode, host='0.0.0.0', port=5000)

@@ -343,6 +343,7 @@
   <nav class="nav-strip" id="nav-strip">
     <a class="nt" href="/"><i class="fas fa-home nav-icon"></i> Dashboard</a>
     <a class="nt" href="/student-list.html"><i class="fas fa-users nav-icon"></i> Student Management</a>
+    <a class="nt" href="/admission-admin.html">Admission</a>
     <a class="nt" href="/marks-entry.html"><i class="fas fa-edit nav-icon"></i> Mark Entry</a>
     <a class="nt" href="/Teachers.html"><i class="fas fa-chalkboard-teacher nav-icon"></i> Teachers</a>
     <a class="nt" href="/Result-card.html"><i class="fas fa-file-invoice nav-icon"></i> Result Card</a>
@@ -701,13 +702,13 @@
             item.studentId   = found.id;
             item.hasPhoto    = !!found.photo;
             item.status      = 'ready';
-            document.getElementById(`name-${i}`).innerHTML = `<strong>${found.name}</strong>${found.photo ? ' <span style="font-size:.7rem;color:var(--amber);"> (Photo exists)</span>' : ''}`;
+            document.getElementById(`name-${i}`).innerHTML = `<strong>${(window.escHtml||(x=>x))(found.name)}</strong>${found.photo ? ' <span style="font-size:.7rem;color:var(--amber);"> (Photo exists)</span>' : ''}`;
             document.getElementById(`status-${i}`).innerHTML = found.photo
               ? pill('warning','Will Replace')
               : pill('ready','Ready');
           } else {
             item.status = 'notfound';
-            document.getElementById(`name-${i}`).innerHTML = `<span style="color:var(--red);font-size:.78rem;">Roll ${item.roll} not found</span>`;
+            document.getElementById(`name-${i}`).innerHTML = `<span style="color:var(--red);font-size:.78rem;">Roll ${(window.escHtml||(x=>x))(item.roll)} not found</span>`;
             document.getElementById(`status-${i}`).innerHTML = pill('notfound','Roll Not Found');
           }
         } catch(e) {

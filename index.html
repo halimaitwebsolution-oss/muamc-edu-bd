@@ -467,6 +467,7 @@
     <nav class="nav-strip" id="nav-strip">
       <a class="nt active" href="/"><i class="fas fa-home nav-icon"></i> Dashboard</a>
       <a class="nt" href="/student-list.html"><i class="fas fa-users nav-icon"></i> Student Management</a>
+      <a class="nt" href="/admission-admin.html">Admission</a>
       <a class="nt" href="/marks-entry.html"><i class="fas fa-edit nav-icon"></i> Mark Entry</a>
       <a class="nt" href="/Teachers.html"><i class="fas fa-chalkboard-teacher nav-icon"></i> Teachers</a>
       <a class="nt" href="/Result-card.html"><i class="fas fa-file-invoice nav-icon"></i> Result Card</a>
@@ -753,11 +754,11 @@
         <tbody>${students.map((s, i) => `<tr>
           <td>${s.photo ? `<img src="${s.photo}" style="width:30px;height:38px;object-fit:cover;border-radius:3px;border:1px solid var(--border);">` : `<div style="width:30px;height:38px;background:var(--slate2);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:.6rem;color:var(--muted);">N/A</div>`}</td>
           <td style="color:var(--muted);font-size:.72rem;">${i + 1}</td>
-          <td><strong>${s.name}</strong></td>
-          <td>${s.roll}</td>
-          <td>${s.reg || '—'}</td>
-          <td>${s.section || '—'}</td>
-          <td>${s.session || '—'}</td>
+          <td><strong>${(window.escHtml||(x=>x))(s.name)}</strong></td>
+          <td>${(window.escHtml||(x=>x))(s.roll)}</td>
+          <td>${(window.escHtml||(x=>x))(s.reg) || '—'}</td>
+          <td>${(window.escHtml||(x=>x))(s.section) || '—'}</td>
+          <td>${(window.escHtml||(x=>x))(s.session) || '—'}</td>
           <td style="white-space:nowrap;">
             <button class="btn btn-primary btn-xs" onclick="window.location.href='/marks-entry.html?id=${s.id}'">Marks</button>
             <button class="btn btn-gold btn-xs" onclick="window.location.href='/Result-card.html?id=${s.id}'">Result</button>

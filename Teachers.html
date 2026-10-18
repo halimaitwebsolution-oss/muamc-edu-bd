@@ -387,6 +387,7 @@
     <nav class="nav-strip" id="nav-strip">
       <a class="nt" href="/"><i class="fas fa-home nav-icon"></i> Dashboard</a>
       <a class="nt" href="/student-list.html"><i class="fas fa-users nav-icon"></i> Student Management</a>
+      <a class="nt" href="/admission-admin.html">Admission</a>
       <a class="nt" href="/marks-entry.html"><i class="fas fa-edit nav-icon"></i> Mark Entry</a>
       <a class="nt active" href="/Teachers.html"><i class="fas fa-chalkboard-teacher nav-icon"></i> Teachers</a>
       <a class="nt" href="/Result-card.html"><i class="fas fa-file-invoice nav-icon"></i> Result Card</a>
@@ -627,13 +628,13 @@
         teachers.forEach((t, i) => {
           html += `<tr>
             <td>${i + 1}</td>
-            <td style="font-weight:600;">${t.name}</td>
-            <td>${t.email}</td>
-            <td>${t.phone}</td>
-            <td><span class="pill pill-sc">${t.subject}</span></td>
-            <td>${t.classes || '—'}</td>
-            <td>${t.qualification}</td>
-            <td>${t.experience}</td>
+            <td style="font-weight:600;">${(window.escHtml||(x=>x))(t.name)}</td>
+            <td>${(window.escHtml||(x=>x))(t.email)}</td>
+            <td>${(window.escHtml||(x=>x))(t.phone)}</td>
+            <td><span class="pill pill-sc">${(window.escHtml||(x=>x))(t.subject)}</span></td>
+            <td>${(window.escHtml||(x=>x))(t.classes) || '—'}</td>
+            <td>${(window.escHtml||(x=>x))(t.qualification)}</td>
+            <td>${(window.escHtml||(x=>x))(t.experience)}</td>
             <td style="white-space:nowrap;">
               <button class="btn btn-sm btn-gold" onclick="editTeacher('${t.id}')">Edit</button>
               <button class="btn btn-sm btn-danger" onclick="deleteTeacher('${t.id}')">Delete</button>

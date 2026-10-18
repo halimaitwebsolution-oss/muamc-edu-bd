@@ -1134,6 +1134,7 @@
     <nav class="nav-strip" id="nav-strip">
       <a class="nt" href="/"><i class="fas fa-home nav-icon"></i> Dashboard</a>
       <a class="nt active" href="/student-list.html"><i class="fas fa-users nav-icon"></i> Student Management</a>
+      <a class="nt" href="/admission-admin.html">Admission</a>
       <a class="nt" href="/marks-entry.html"><i class="fas fa-edit nav-icon"></i> Mark Entry</a>
       <a class="nt" href="/Teachers.html"><i class="fas fa-chalkboard-teacher nav-icon"></i> Teachers</a>
       <a class="nt" href="/Result-card.html"><i class="fas fa-file-invoice nav-icon"></i> Result Card</a>
@@ -1735,8 +1736,8 @@
         return;
       }
 
-      if (LS.students().find(s => s.roll === roll)) {
-        setAlert('add-alert', 'err', 'A student with this roll number already exists.');
+      if (LS.students().find(s => s.roll === roll && s.cls === cls && s.group === grp && s.session === session)) {
+        setAlert('add-alert', 'err', 'A student with this roll number already exists in this class/group/session.');
         return;
       }
 
@@ -1826,10 +1827,10 @@
         ${s.studentSubmitted ? `<span title="Student self-submitted via portal" style="position:absolute;top:0;right:0;background:#16a34a;color:#fff;font-size:.52rem;font-weight:700;padding:2px 4px;border-radius:3px;line-height:1;">&#10003;</span>` : ''}
       </td>
       <td style="color:var(--muted);">${i + 1}</td>
-      <td><strong>${s.name}</strong>${s.studentSubmitted ? ` <span style="font-size:.65rem;color:#16a34a;font-weight:600;" title="Submitted via student portal">(self-submitted)</span>` : ''}</td>
-      <td>${s.roll}</td><td>${s.reg || '—'}</td>
-      <td><span class="pill ${pillCls(s.group)}">${s.group}</span></td>
-      <td>${s.session || '—'}</td>
+      <td><strong>${(window.escHtml||(x=>x))(s.name)}</strong>${s.studentSubmitted ? ` <span style="font-size:.65rem;color:#16a34a;font-weight:600;" title="Submitted via student portal">(self-submitted)</span>` : ''}</td>
+      <td>${(window.escHtml||(x=>x))(s.roll)}</td><td>${(window.escHtml||(x=>x))(s.reg) || '—'}</td>
+      <td><span class="pill ${pillCls(s.group)}">${(window.escHtml||(x=>x))(s.group)}</span></td>
+      <td>${(window.escHtml||(x=>x))(s.session) || '—'}</td>
       <td style="white-space:nowrap;">
         <button class="btn btn-gold btn-xs" onclick="editStudent('${s.id}')">Edit</button>
         ${s.cls === 'Class-XI' ? `<button class="btn btn-success btn-xs" onclick="promoteStudent('${s.id}')">Promote →</button>` : ''}
@@ -1920,7 +1921,7 @@
 
       if (!n || !ro || !cl || !gr || !sn) { setAlert('edit-alert', 'err', 'Name, Roll Number, Class, Group and Session are required.'); return; }
 
-      if (LS.students().find(s => s.id !== id && s.roll === ro)) { setAlert('edit-alert', 'err', 'A student with this roll number already exists.'); return; }
+      if (LS.students().find(s => s.id !== id && s.roll === ro && s.cls === cl && s.group === gr && s.session === sn)) { setAlert('edit-alert', 'err', 'A student with this roll number already exists in this class/group/session.'); return; }
 
       try {
         const stu = LS.students().find(s => s.id === id);
