@@ -1,56 +1,565 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Login — Moinuddin Adarsha Mohila College AMS</title>
-<link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700;900&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-<style>
-:root{
-  --navy:#0d2b45; --navy2:#174070; --gold:#c9973a; --slate:#f1f4f8; --border:#dde3ed; --txt:#0f172a; --muted:#64748b; --r:12px;
-}
-*{box-sizing:border-box;margin:0;padding:0;}
-html,body{height:100%;}
-body{font-family:'Source Sans 3',sans-serif;background:linear-gradient(135deg,#0d2b45 0%,#1f5490 100%);color:#111;display:flex;align-items:center;justify-content:center;padding:16px;}
-.login-card{width:100%;max-width:420px;background:#fff;border-radius:22px;box-shadow:0 28px 80px rgba(0,0,0,.28);overflow:hidden;}
-.login-top-bar{height:6px;background:linear-gradient(90deg,var(--navy),var(--gold),var(--navy2));}
-.login-hdr{padding:32px 28px 24px;text-align:center;background:#f8faff;border-bottom:1px solid var(--border);}
-.login-logo-wrap{width:80px;height:80px;border-radius:50%;border:3px solid var(--gold);margin:0 auto 14px;overflow:hidden;background:#fff;display:flex;align-items:center;justify-content:center;}
-.login-logo-wrap img{width:100%;height:100%;object-fit:contain;}
-.login-college{font-family:'Merriweather',serif;font-size:1rem;font-weight:700;color:var(--navy);line-height:1.3;margin-bottom:4px;}
-.login-subtitle{font-size:.76rem;color:var(--muted);letter-spacing:.5px;}
-.login-badge{display:inline-block;margin-top:10px;background:var(--navy);color:#fff;padding:6px 14px;border-radius:999px;font-size:.73rem;font-weight:600;letter-spacing:.3px;}
-.login-body{padding:26px 28px 28px;}
-.login-title{font-family:'Merriweather',serif;font-size:1.05rem;font-weight:700;color:var(--navy);margin-bottom:16px;text-align:center;}
-.lf-group{margin-bottom:16px;}
-.lf-label{display:block;font-size:.78rem;font-weight:600;color:var(--navy);margin-bottom:8px;}
-.lf-input-wrap{position:relative;}
-.lf-inp{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:14px;font-size:.95rem;color:var(--txt);background:#fafcff;transition:border .15s,box-shadow .15s;}
-.lf-inp:focus{outline:none;border-color:var(--navy2);box-shadow:0 0 0 4px rgba(31,84,144,.12);}
-.pw-toggle{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:1.05rem;color:var(--muted);cursor:pointer;}
-.login-btn{width:100%;padding:13px 14px;border:none;border-radius:14px;background:var(--navy);color:#fff;font-size:.95rem;font-weight:700;cursor:pointer;transition:background .15s,transform .15s;}
-.login-btn:hover{background:var(--navy2);transform:translateY(-1px);}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — Moinuddin Adarsha Mohila College, Sylhet</title>
+  
+  <!-- Web Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://banglawebfonts.pages.dev/css/bornomala.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
-#login-err-msg{display:none;margin-bottom:14px;padding:11px 14px;border:1px solid #fecaca;background:#fef2f2;color:#991b1b;border-radius:14px;text-align:center;font-size:.85rem;}
-</style>
+  <style>
+    /* Local & CDN Bornomala Webfont */
+    @font-face {
+      font-family: 'Bornomala';
+      src: url('static/webfonts/bornomala-regular.woff2') format('woff2'),
+           url('https://banglawebfonts.pages.dev/fonts/bornomala/bornomala-regular.woff2') format('woff2');
+      font-weight: normal;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Bornomala';
+      src: url('static/webfonts/bornomala-regular.woff2') format('woff2'),
+           url('https://banglawebfonts.pages.dev/fonts/bornomala/bornomala-regular.woff2') format('woff2');
+      font-weight: bold;
+      font-style: normal;
+      font-display: swap;
+    }
 
+    :root {
+      --primary: #6d28d9;
+      --primary-dark: #581c87;
+      --primary-light: #8b5cf6;
+      --purple-accent: #c084fc;
+      --border-color: #e2e8f0;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+    }
 
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      min-height: 100vh;
+      width: 100%;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: #fff;
+      overflow-x: hidden;
+    }
+
+    /* Page Background with FL_Over Building.jpg and Elegant Purple Gradient */
+    body {
+      background-color: #1a082e;
+      background-image: 
+        linear-gradient(135deg, rgba(35, 10, 66, 0.88) 0%, rgba(76, 29, 149, 0.80) 42%, rgba(109, 40, 217, 0.65) 75%, rgba(24, 7, 50, 0.92) 100%),
+        url('static/FL_Over_Building.jpg'),
+        url('static/FL_Over%20Building.jpg'),
+        url('FL_Over Building.jpg');
+      background-size: cover;
+      background-position: center center;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    /* Subtle Ambient Light Reflections */
+    .ambient-glow-1 {
+      position: fixed;
+      top: 10%;
+      left: 12%;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(168, 85, 247, 0.22) 0%, transparent 70%);
+      filter: blur(50px);
+      pointer-events: none;
+      z-index: 1;
+    }
+    .ambient-glow-2 {
+      position: fixed;
+      bottom: 5%;
+      right: 20%;
+      width: 440px;
+      height: 440px;
+      background: radial-gradient(circle, rgba(139, 92, 246, 0.18) 0%, transparent 70%);
+      filter: blur(60px);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* Layout Wrapper */
+    .login-wrapper {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 40px 6vw;
+      gap: 40px;
+    }
+
+    /* ══════════ LEFT SECTION (HERO / BRANDING PANEL) ══════════ */
+    .brand-section {
+      flex: 1 1 60%;
+      max-width: 820px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      background: transparent;
+      padding: 20px 0;
+      animation: fadeInLeft 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    /* College Seal & Pill */
+    .college-header-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 22px;
+      padding: 8px 18px 8px 8px;
+      background: rgba(255, 255, 255, 0.10);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 999px;
+      width: fit-content;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    }
+    .college-logo-mini {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: #ffffff;
+      padding: 2px;
+      border: 2px solid var(--purple-accent);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+    }
+    .college-logo-mini img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    .college-pill-text {
+      display: flex;
+      flex-direction: column;
+    }
+    .pill-title {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: 0.04em;
+    }
+    .pill-sub {
+      font-size: 0.72rem;
+      color: #e9d5ff;
+      letter-spacing: 0.05em;
+    }
+
+    /* Bengali Name in Bornomala Font */
+    .college-title-bn {
+      font-family: 'Bornomala', 'Kalpurush', 'Hind Siliguri', 'Noto Sans Bengali', serif;
+      font-size: clamp(2rem, 3.1vw, 3.2rem);
+      font-weight: 700;
+      line-height: 1.25;
+      color: #ffffff;
+      margin-bottom: 12px;
+      text-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 2px 4px rgba(0, 0, 0, 0.3);
+      letter-spacing: 0.01em;
+      word-break: keep-all;
+    }
+
+    /* English Name */
+    .college-title-en {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: clamp(0.95rem, 1.35vw, 1.25rem);
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #f3e8ff;
+      margin-bottom: 22px;
+      line-height: 1.4;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+    }
+
+    /* Decorative Divider */
+    .title-divider {
+      width: 100px;
+      height: 4px;
+      background: linear-gradient(90deg, #c084fc 0%, #e879f9 70%, transparent 100%);
+      border-radius: 999px;
+      margin-bottom: 24px;
+    }
+
+    /* Subtitle Tag: Integrated System of Automation, Developed by Enthelix IT Solution */
+    .system-info-box {
+      display: inline-flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 14px 22px;
+      background: rgba(255, 255, 255, 0.09);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.20);
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+      width: fit-content;
+      transition: transform 0.25s ease, background 0.25s ease;
+    }
+    .system-info-box:hover {
+      background: rgba(255, 255, 255, 0.13);
+      transform: translateY(-2px);
+    }
+    .system-info-top {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.86rem;
+      font-weight: 600;
+      color: #ffffff;
+      letter-spacing: 0.04em;
+    }
+    .system-info-top i {
+      color: #d8b4fe;
+      font-size: 0.95rem;
+    }
+    .system-info-dev {
+      font-size: 0.78rem;
+      color: #e9d5ff;
+      letter-spacing: 0.02em;
+    }
+    .system-info-dev strong {
+      color: #ffffff;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+    }
+
+    /* ══════════ RIGHT SECTION (LOGIN CARD) ══════════ */
+    .login-section {
+      flex: 0 0 440px;
+      max-width: 440px;
+      width: 100%;
+      display: flex;
+      justify-content: flex-end;
+      animation: fadeInRight 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .login-card {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.98);
+      border-radius: 26px;
+      box-shadow: 
+        0 24px 60px -10px rgba(15, 6, 32, 0.55),
+        0 10px 24px -5px rgba(0, 0, 0, 0.25),
+        0 0 0 1px rgba(255, 255, 255, 0.7);
+      overflow: hidden;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      color: var(--text-main);
+    }
+
+    /* Top Accent Line */
+    .card-top-accent {
+      height: 6px;
+      background: linear-gradient(90deg, #6d28d9 0%, #9333ea 50%, #c084fc 100%);
+    }
+
+    /* Card Header - Clean & Official, No Logo / College Name */
+    .card-head {
+      padding: 34px 34px 20px;
+      text-align: center;
+    }
+    .card-icon-wrap {
+      width: 54px;
+      height: 54px;
+      margin: 0 auto 16px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(109, 40, 217, 0.12), rgba(168, 85, 247, 0.18));
+      border: 1px solid rgba(109, 40, 217, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary);
+      font-size: 1.35rem;
+    }
+    .card-title {
+      font-size: 1.45rem;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+    }
+    .card-subtitle {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      line-height: 1.4;
+    }
+
+    /* Card Body Form */
+    .card-body {
+      padding: 10px 34px 34px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 8px;
+      letter-spacing: 0.02em;
+    }
+    .form-label span {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .form-label i {
+      color: var(--primary);
+      font-size: 0.85rem;
+    }
+
+    .input-wrapper {
+      position: relative;
+    }
+    .input-icon-left {
+      position: absolute;
+      left: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #94a3b8;
+      font-size: 0.95rem;
+      pointer-events: none;
+      transition: color 0.18s;
+    }
+    .form-input {
+      width: 100%;
+      padding: 13px 16px 13px 44px;
+      border: 1.5px solid var(--border-color);
+      border-radius: 14px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      color: #0f172a;
+      background: #f8fafc;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .form-input::placeholder {
+      color: #94a3b8;
+    }
+    .form-input:focus {
+      outline: none;
+      background: #ffffff;
+      border-color: var(--primary-light);
+      box-shadow: 0 0 0 4px rgba(109, 40, 217, 0.12);
+    }
+    .form-input:focus + .input-icon-left,
+    .input-wrapper:focus-within .input-icon-left {
+      color: var(--primary);
+    }
+    .form-input.err {
+      border-color: #ef4444 !important;
+      background: #fef2f2 !important;
+    }
+
+    .toggle-pw-btn {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.15s;
+    }
+    .toggle-pw-btn:hover {
+      color: #475569;
+    }
+
+    /* Error Message Box */
+    #login-err-msg {
+      display: none;
+      margin-bottom: 18px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #991b1b;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-align: center;
+      animation: shake 0.3s ease-in-out;
+    }
+    #login-err-msg i {
+      margin-right: 6px;
+      color: #dc2626;
+    }
+
+    /* Login Submit Button */
+    .submit-btn {
+      width: 100%;
+      padding: 14px 18px;
+      border: none;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #6d28d9 0%, #7c3aed 100%);
+      color: #ffffff;
+      font-size: 0.98rem;
+      font-weight: 700;
+      font-family: inherit;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 4px 16px rgba(109, 40, 217, 0.35);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .submit-btn:hover {
+      background: linear-gradient(135deg, #581c87 0%, #6d28d9 100%);
+      box-shadow: 0 8px 24px rgba(109, 40, 217, 0.45);
+      transform: translateY(-2px);
+    }
+    .submit-btn:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 10px rgba(109, 40, 217, 0.3);
+    }
+    .submit-btn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Card Security Badge */
+    .card-security-note {
+      margin-top: 22px;
+      padding-top: 18px;
+      border-top: 1px solid #f1f5f9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #94a3b8;
+      letter-spacing: 0.03em;
+    }
+    .card-security-note i {
+      color: #10b981;
+    }
+
+    /* Animations */
+    @keyframes fadeInLeft {
+      from { opacity: 0; transform: translateX(-30px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes fadeInRight {
+      from { opacity: 0; transform: translateX(30px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-6px); }
+      40%, 80% { transform: translateX(6px); }
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .login-wrapper {
+        flex-direction: column;
+        justify-content: center;
+        padding: 50px 24px;
+        gap: 36px;
+      }
+      .brand-section {
+        max-width: 100%;
+        text-align: center;
+        align-items: center;
+        padding: 10px 0;
+      }
+      .college-header-pill {
+        margin: 0 auto 20px;
+      }
+      .title-divider {
+        margin: 0 auto 20px;
+      }
+      .system-info-box {
+        margin: 0 auto;
+      }
+      .login-section {
+        justify-content: center;
+        max-width: 440px;
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .login-wrapper {
+        padding: 30px 16px;
+      }
+      .college-title-bn {
+        font-size: 1.85rem;
+      }
+      .college-title-en {
+        font-size: 0.85rem;
+        letter-spacing: 0.08em;
+      }
+      .card-head {
+        padding: 26px 20px 16px;
+      }
+      .card-body {
+        padding: 10px 20px 26px;
+      }
+      .system-info-box {
+        padding: 10px 16px;
+      }
+    }
+  </style>
 
   <!-- PAGE TRANSITION LOADER -->
   <style>
-    .page-loader{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.72);backdrop-filter:blur(2px);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .24s ease,visibility .24s ease;z-index:9999;}
+    .page-loader{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.72);backdrop-filter:blur(3px);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .24s ease,visibility .24s ease;z-index:9999;}
     .page-loader.visible{opacity:1;visibility:visible;pointer-events:auto;}
-    .page-loader-inner{display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px 20px;background:rgba(255,255,255,.92);border:1px solid rgba(15,23,42,.1); box-shadow:0 12px 32px rgba(15,23,42,.12);}
+    .page-loader-inner{display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px 20px;background:rgba(255,255,255,.94);border-radius:14px;border:1px solid rgba(15,23,42,.1); box-shadow:0 12px 32px rgba(15,23,42,.15);}
     .page-loader-dots{display:flex;gap:8px;}
-    .page-loader-dot{width:12px;height:12px;background:var(--navy);animation:page-loader-pulse 1s ease-in-out infinite both;}
+    .page-loader-dot{width:12px;height:12px;border-radius:50%;background:var(--primary);animation:page-loader-pulse 1s ease-in-out infinite both;}
     .page-loader-dot:nth-child(2){animation-delay:.16s;}
     .page-loader-dot:nth-child(3){animation-delay:.32s;}
     @keyframes page-loader-pulse{0%,100%{transform:scale(1);opacity:.4;}50%{transform:scale(1.45);opacity:1;}}
-    .page-loader-text{font-size:.92rem;color:var(--navy);font-weight:700;letter-spacing:.02em;}
+    .page-loader-text{font-size:.92rem;color:#0f172a;font-weight:700;letter-spacing:.02em;}
   </style>
 </head>
 <body>
+  <!-- Ambient Backlight Elements -->
+  <div class="ambient-glow-1"></div>
+  <div class="ambient-glow-2"></div>
+
+  <!-- Page Loader -->
   <div id="page-loader" class="page-loader" aria-hidden="true">
     <div class="page-loader-inner">
       <div class="page-loader-dots">
@@ -62,131 +571,201 @@ body{font-family:'Source Sans 3',sans-serif;background:linear-gradient(135deg,#0
     </div>
   </div>
 
-<div class="login-card">
-  <div class="login-top-bar"></div>
-  <div class="login-hdr">
-    <div class="login-logo-wrap">
-      <img src="https://www.muamc.edu.bd/wp-content/uploads/2025/01/logo-muam-scaled.jpeg" alt="College Logo">
+  <!-- Main Login Interface Container -->
+  <div class="login-wrapper">
+    <!-- LEFT PANEL: Elegant College Branding Over Translucent Purple Background -->
+    <div class="brand-section">
+      <!-- College Emblem & Accreditation Pill -->
+      <div class="college-header-pill">
+        <div class="college-logo-mini">
+          <img src="https://www.muamc.edu.bd/wp-content/uploads/2025/01/logo-muam-scaled.jpeg" alt="MUAMC Emblem">
+        </div>
+        <div class="college-pill-text">
+          <span class="pill-title">Academic Management System</span>
+          <span class="pill-sub">ESTD. 1984 &bull; Sylhet, Bangladesh</span>
+        </div>
+      </div>
+
+      <!-- College Name in Bengali (Bornomala Font) -->
+      <h1 class="college-title-bn">মইনউদ্দিন আদর্শ মহিলা কলেজ, সিলেট</h1>
+
+      <!-- College Name in English -->
+      <h2 class="college-title-en">MOINUDDIN ADARSHA MOHILA COLLEGE, SYLHET</h2>
+
+      <!-- Subtle Accent Divider -->
+      <div class="title-divider"></div>
+
+      <!-- System & Developer Attribution -->
+      <div class="system-info-box">
+        <div class="system-info-top">
+          <i class="fa-solid fa-cube"></i>
+          <span>Integrated System of Automation</span>
+        </div>
+        <div class="system-info-dev">
+          Developed by <strong>Enthelix IT Solution</strong>
+        </div>
+      </div>
     </div>
-    <div class="login-college">Moinuddin Adarsha Mohila College</div>
-    <div class="login-subtitle">Academic Management System</div>
-    <div class="login-badge">Authorized Login</div>
-  </div>
-  <div class="login-body">
-    <div class="login-title">Enter your credentials</div>
-    <div id="login-err-msg">Invalid User ID or Password</div>
-    <form id="login-form">
-      <div class="lf-group">
-        <label class="lf-label" for="l-uid">User ID</label>
-        <div class="lf-input-wrap">
-          <input id="l-uid" class="lf-inp" type="text" placeholder="Enter your User ID" autocomplete="username" required>
+
+    <!-- RIGHT PANEL: Refined Login Card Aligned to the Right -->
+    <div class="login-section">
+      <div class="login-card">
+        <div class="card-top-accent"></div>
+        
+        <div class="card-head">
+          <div class="card-icon-wrap">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <h3 class="card-title">Sign In</h3>
+          <p class="card-subtitle">Enter your authorized credentials to access your account</p>
+        </div>
+
+        <div class="card-body">
+          <div id="login-err-msg"><i class="fa-solid fa-circle-exclamation"></i><span id="err-text">Invalid User ID or Password</span></div>
+
+          <form id="login-form">
+            <div class="form-group">
+              <label class="form-label" for="l-uid">
+                <span><i class="fa-regular fa-user"></i> User ID</span>
+              </label>
+              <div class="input-wrapper">
+                <i class="fa-regular fa-id-card input-icon-left"></i>
+                <input id="l-uid" class="form-input" type="text" placeholder="Enter your User ID" autocomplete="username" required>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="l-pw">
+                <span><i class="fa-solid fa-lock"></i> Password</span>
+              </label>
+              <div class="input-wrapper">
+                <i class="fa-solid fa-key input-icon-left"></i>
+                <input id="l-pw" class="form-input" type="password" placeholder="Enter your Password" autocomplete="current-password" required>
+                <button class="toggle-pw-btn" type="button" id="pw-eye" onclick="togglePw()" title="Show Password">
+                  <i class="fa-solid fa-eye"></i>
+                </button>
+              </div>
+            </div>
+
+            <button class="submit-btn" type="submit" id="login-submit-btn">
+              <span>Sign In</span>
+              <i class="fa-solid fa-arrow-right"></i>
+            </button>
+
+            <div class="card-security-note">
+              <i class="fa-solid fa-lock"></i>
+              <span>Authorized Personnel Only &bull; SSL Secured</span>
+            </div>
+          </form>
         </div>
       </div>
-      <div class="lf-group">
-        <label class="lf-label" for="l-pw">Password</label>
-        <div class="lf-input-wrap">
-          <input id="l-pw" class="lf-inp" type="password" placeholder="Enter your Password" autocomplete="current-password" required>
-          <button class="pw-toggle" type="button" id="pw-eye" onclick="togglePw()" title="Show Password"><i class="fa-solid fa-eye"></i></button>
-        </div>
-      </div>
-      <button class="login-btn" type="submit" id="login-submit-btn">Login →</button>
-    </form>
+    </div>
   </div>
-</div>
-<script>
 
-// --- API CONFIGURATION FOR STATIC SERVERS ---
-(function() {
-  const defaultBase = window.location.origin;
-  window.API_BASE = window.API_BASE !== undefined ? window.API_BASE : defaultBase;
-  const _origFetch = window.fetch;
-  window.fetch = function() {
-    let args = Array.prototype.slice.call(arguments);
-    let resource = args[0];
-    let config = args[1];
-    if (typeof resource === 'string' && resource.startsWith('/api')) {
-      resource = window.API_BASE + resource;
-    }
-    config = config || {};
-    config.credentials = 'include';
-    args[0] = resource;
-    args[1] = config;
-    return _origFetch.apply(window, args);
-  };
-})();
-// --------------------------------------------
+  <script>
+  // --- API CONFIGURATION FOR STATIC SERVERS ---
+  (function() {
+    const defaultBase = window.location.origin;
+    window.API_BASE = window.API_BASE !== undefined ? window.API_BASE : defaultBase;
+    const _origFetch = window.fetch;
+    window.fetch = function() {
+      let args = Array.prototype.slice.call(arguments);
+      let resource = args[0];
+      let config = args[1];
+      if (typeof resource === 'string' && resource.startsWith('/api')) {
+        resource = window.API_BASE + resource;
+      }
+      config = config || {};
+      config.credentials = 'include';
+      args[0] = resource;
+      args[1] = config;
+      return _origFetch.apply(window, args);
+    };
+  })();
+  // --------------------------------------------
 
-const AUTH = { key:'muamc_auth' };
-const form = document.getElementById('login-form');
-const errEl = document.getElementById('login-err-msg');
-const uidEl = document.getElementById('l-uid');
-const pwEl = document.getElementById('l-pw');
-const btn = document.getElementById('login-submit-btn');
-form.addEventListener('submit', async function(event){
-  event.preventDefault();
-  await doLogin();
-});
-window.addEventListener('load', async function(){
-  try {
-    const response = await fetch('/api/auth-status');
-    const result = await response.json();
-    if(result.authenticated){
-      window.location.href = result.role === 'admin' ? 'index.html' : 'dashboard.html';
-      return;
-    }
-  } catch (error) {
-    // Ignore error, proceed to login
-  }
-  uidEl.focus();
-});
-async function doLogin(){
-  const uid = uidEl.value.trim();
-  const pw = pwEl.value;
-  uidEl.classList.remove('err');
-  pwEl.classList.remove('err');
-  errEl.style.display = 'none';
-  btn.disabled = true;
-  btn.textContent = 'Logging in...';
-  try {
-    const response = await fetch('/api/login', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({uid, pw})
-    });
-    const result = await response.json();
-    if(result.ok){
-      window.location.href = result.role === 'admin' ? 'index.html' : 'dashboard.html';
-      return;
-    }
-    showError(result.message || 'Invalid User ID or Password');
-  } catch (error) {
-    showError('Cannot reach server. Is Flask running?');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Login →';
-  }
-}
-function showError(message){
-  errEl.textContent = message;
-  errEl.style.display = 'block';
-  uidEl.classList.add('err');
-  pwEl.classList.add('err');
-  pwEl.value = '';
-}
-function togglePw(){
-  const eyeBtn = document.getElementById('pw-eye');
-  if(pwEl.type === 'password'){
-    pwEl.type = 'text';
-    eyeBtn.innerHTML = '<i class="fa-solid fa-eye-slash"></i>';
-    eyeBtn.title = 'Hide Password';
-  } else {
-    pwEl.type = 'password';
-    eyeBtn.innerHTML = '<i class="fa-solid fa-eye"></i>';
-    eyeBtn.title = 'Show Password';
-  }
-}
-</script>
+  const AUTH = { key:'muamc_auth' };
+  const form = document.getElementById('login-form');
+  const errEl = document.getElementById('login-err-msg');
+  const errTextEl = document.getElementById('err-text');
+  const uidEl = document.getElementById('l-uid');
+  const pwEl = document.getElementById('l-pw');
+  const btn = document.getElementById('login-submit-btn');
 
+  form.addEventListener('submit', async function(event){
+    event.preventDefault();
+    await doLogin();
+  });
+
+  window.addEventListener('load', async function(){
+    try {
+      const response = await fetch('/api/auth-status');
+      const result = await response.json();
+      if(result.authenticated){
+        window.location.href = result.role === 'admin' ? 'index.html' : 'dashboard.html';
+        return;
+      }
+    } catch (error) {
+      // Ignore error, proceed to login
+    }
+    uidEl.focus();
+  });
+
+  async function doLogin(){
+    const uid = uidEl.value.trim();
+    const pw = pwEl.value;
+    uidEl.classList.remove('err');
+    pwEl.classList.remove('err');
+    errEl.style.display = 'none';
+    btn.disabled = true;
+    btn.innerHTML = '<span>Signing in...</span> <i class="fa-solid fa-spinner fa-spin"></i>';
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({uid, pw})
+      });
+      const result = await response.json();
+      if(result.ok){
+        window.location.href = result.role === 'admin' ? 'index.html' : 'dashboard.html';
+        return;
+      }
+      showError(result.message || 'Invalid User ID or Password');
+    } catch (error) {
+      showError('Cannot reach server. Is Flask running?');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<span>Sign In</span> <i class="fa-solid fa-arrow-right"></i>';
+    }
+  }
+
+  function showError(message){
+    if (errTextEl) {
+      errTextEl.textContent = message;
+    } else {
+      errEl.textContent = message;
+    }
+    errEl.style.display = 'block';
+    uidEl.classList.add('err');
+    pwEl.classList.add('err');
+    pwEl.value = '';
+  }
+
+  function togglePw(){
+    const eyeBtn = document.getElementById('pw-eye');
+    if(pwEl.type === 'password'){
+      pwEl.type = 'text';
+      eyeBtn.innerHTML = '<i class="fa-solid fa-eye-slash"></i>';
+      eyeBtn.title = 'Hide Password';
+    } else {
+      pwEl.type = 'password';
+      eyeBtn.innerHTML = '<i class="fa-solid fa-eye"></i>';
+      eyeBtn.title = 'Show Password';
+    }
+  }
+  </script>
+
+  <!-- Page Loader Transition Handler -->
   <script>
     (function(){
       const loader = document.getElementById('page-loader');

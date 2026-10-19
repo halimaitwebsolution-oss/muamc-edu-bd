@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -8,8 +8,13 @@
   <meta name="description" content="Generate exam hall seat plans, print seat stickers (9 per A4), room sheets, and center summary for HSC examinations.">
   <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700;900&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/all.min.css">
-  <!-- JsBarcode for roll number barcode on stickers -->
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+  <!-- JsBarcode for roll number barcode on stickers (CDN with local fallback) -->
+  <script src="/static/js/JsBarcode.all.min.js"></script>
+  <script>
+    if (typeof JsBarcode === 'undefined') {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>');
+    }
+  </script>
   <style>
     /* ═══════════════ DESIGN TOKENS ═══════════════ */
     :root {
@@ -165,27 +170,27 @@
       border-radius: 4px;
       overflow: hidden;
       background: #fff;
-      font-size: 10pt;
+      font-size: 11pt;
       page-break-inside: avoid;
       break-inside: avoid;
     }
     .sticker-header {
       background: var(--navy);
       color: #fff;
-      padding: 5px 8px;
+      padding: 6px 10px;
       display: flex;
       align-items: center;
       gap: 6px;
     }
     .sticker-header .sh-college {
-      font-size: 7pt;
+      font-size: 8.5pt;
       font-weight: 700;
       line-height: 1.2;
       flex: 1;
     }
     .sticker-header .sh-exam {
-      font-size: 6pt;
-      opacity: .8;
+      font-size: 7.2pt;
+      opacity: .9;
       margin-top: 1px;
     }
     .sticker-body {
@@ -194,71 +199,72 @@
     }
     .sticker-info {
       flex: 1;
-      padding: 7px 8px;
+      padding: 8px 10px;
       display: flex;
       flex-direction: column;
-      gap: 3px;
-    }
-    .sticker-info .si-name {
-      font-size: 8.5pt;
-      font-weight: 700;
-      color: #0d2b45;
-      line-height: 1.2;
-    }
-    .sticker-info .si-row {
-      font-size: 7pt;
-      color: #334155;
-      display: flex;
       gap: 4px;
     }
+    .sticker-info .si-name {
+      font-size: 10.5pt;
+      font-weight: 700;
+      color: #0d2b45;
+      line-height: 1.25;
+    }
+    .sticker-info .si-row {
+      font-size: 8.5pt;
+      color: #1e293b;
+      display: flex;
+      gap: 6px;
+      line-height: 1.25;
+    }
     .sticker-info .si-row span.label {
-      font-weight: 600;
-      color: #64748b;
+      font-weight: 700;
+      color: #475569;
     }
     .sticker-photo-col {
-      width: 68px;
-      min-width: 68px;
-      padding: 6px;
+      width: 72px;
+      min-width: 72px;
+      padding: 8px;
       display: flex;
-      align-items: flex-start;
+      align-items: center;
       justify-content: center;
     }
     .sticker-photo {
-      width: 56px;
-      height: 68px;
+      width: 60px;
+      height: 72px;
       object-fit: cover;
       border: 1px solid #c8d2e0;
       border-radius: 2px;
       background: #e8ecf2;
     }
     .sticker-photo-placeholder {
-      width: 56px;
-      height: 68px;
+      width: 60px;
+      height: 72px;
       background: #e8ecf2;
       border: 1px solid #c8d2e0;
       border-radius: 2px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 6pt;
+      font-size: 7pt;
       color: #94a3b8;
       text-align: center;
     }
     .sticker-footer {
       background: var(--slate);
       border-top: 1px solid var(--border);
-      padding: 5px 8px;
+      padding: 6px 10px;
       display: flex;
       align-items: center;
       justify-content: space-between;
     }
     .sticker-footer .sf-room {
-      font-size: 7.5pt;
+      font-size: 8.5pt;
       font-weight: 700;
       color: var(--navy);
     }
     .sticker-footer .sf-seat {
-      font-size: 7.5pt;
+      font-size: 8.5pt;
       font-weight: 700;
       color: var(--gold);
     }
@@ -266,8 +272,22 @@
       padding: 4px 8px 5px;
       text-align: center;
       border-top: 1px solid var(--border);
+      background: #fff;
     }
-    .sticker-barcode-row svg { max-width: 100%; height: 28px; }
+    .sticker-barcode-row svg {
+      max-width: 100%;
+      height: 34px;
+      display: block;
+      margin: 0 auto;
+    }
+    .sticker-barcode-row span {
+      display: block;
+      font-size: 8.5pt;
+      font-weight: 700;
+      color: #0d2b45;
+      letter-spacing: 1.5px;
+      margin-top: 1px;
+    }
 
     /* ══════════════════════════════════════════════════════════
        PRINT SYSTEM CONTAINER VISIBILITY (SCREEN)
@@ -350,19 +370,10 @@
        1. Seat Stickers (A4 Landscape, 3x3 = 9 per page)
        2. Room Sheets (A4 Portrait)
        3. Center Summary (A4 Portrait)
+       NOTE: Orientation is set dynamically by setPrintPageOrientation()
     ══════════════════════════════════════════════════════════ */
-    @page landscapeSheet {
-      size: A4 landscape;
-      margin: 0;
-    }
-
-    @page portraitSheet {
-      size: A4 portrait;
-      margin: 0;
-    }
-
     @page {
-      size: A4 portrait;
+      size: A4 landscape;
       margin: 0;
     }
 
@@ -457,7 +468,6 @@
 
       /* ─── STICKER SHEET A4 LANDSCAPE PRINT LAYOUT (3x3 = 9 Stickers) ─── */
       .sp-print-page {
-        page: landscapeSheet;
         width: 297mm !important;
         height: 210mm !important;
         min-height: 210mm !important;
@@ -501,7 +511,7 @@
       }
 
       .sp-print-page .sticker-card .sticker-header {
-        padding: 3px 6px !important;
+        padding: 4px 8px !important;
         background: #0d2b45 !important;
         color: #fff !important;
         -webkit-print-color-adjust: exact !important;
@@ -509,12 +519,12 @@
         align-items: center;
       }
       .sp-print-page .sticker-card .sticker-header .sh-college {
-        font-size: 7.2pt !important;
+        font-size: 8.5pt !important;
         font-weight: 700 !important;
-        line-height: 1.15;
+        line-height: 1.2;
       }
       .sp-print-page .sticker-card .sticker-header .sh-exam {
-        font-size: 6pt !important;
+        font-size: 7pt !important;
         opacity: .9 !important;
         margin-top: 1px;
       }
@@ -522,83 +532,97 @@
         display: flex;
         flex: 1;
         align-items: center;
-        padding: 2px 4px;
+        padding: 3px 6px;
         min-height: 0;
       }
       .sp-print-page .sticker-card .sticker-info {
         flex: 1;
-        padding: 1px 4px !important;
+        padding: 2px 6px 2px 2px !important;
         display: flex;
         flex-direction: column;
         justify-content: center;
-        gap: 1.5px;
+        gap: 2.5px;
         overflow: hidden;
       }
       .sp-print-page .sticker-card .sticker-info .si-name {
-        font-size: 8.2pt !important;
+        font-size: 10.5pt !important;
         font-weight: 700 !important;
         color: #0d2b45 !important;
-        line-height: 1.15;
+        line-height: 1.2;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
       }
       .sp-print-page .sticker-card .sticker-info .si-row {
-        font-size: 6.7pt !important;
-        color: #1e293b !important;
+        font-size: 8.5pt !important;
+        color: #0f172a !important;
         display: flex;
-        gap: 3px;
-        line-height: 1.15;
+        gap: 5px;
+        line-height: 1.2;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
       }
+      .sp-print-page .sticker-card .sticker-info .si-row span.label {
+        font-weight: 700 !important;
+        color: #334155 !important;
+      }
       .sp-print-page .sticker-card .sticker-photo-col {
-        width: 52px !important;
-        min-width: 52px !important;
+        width: 60px !important;
+        min-width: 60px !important;
         padding: 2px !important;
         display: flex;
         align-items: center;
         justify-content: center;
       }
       .sp-print-page .sticker-card .sticker-photo {
-        width: 46px !important;
-        height: 56px !important;
+        width: 52px !important;
+        height: 64px !important;
         object-fit: cover;
         border: 1px solid #cbd5e1;
         border-radius: 2px;
       }
       .sp-print-page .sticker-card .sticker-photo-placeholder {
-        width: 46px !important;
-        height: 56px !important;
+        width: 52px !important;
+        height: 64px !important;
         background: #f1f5f9;
         border: 1px solid #cbd5e1;
         border-radius: 2px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 6pt;
+        font-size: 7pt;
         color: #94a3b8;
         text-align: center;
       }
       .sp-print-page .sticker-card .sticker-barcode-row {
-        padding: 1px 4px 2px !important;
+        padding: 3px 6px 3px !important;
         text-align: center;
-        border-top: 1px solid #e2e8f0;
+        border-top: 1px solid #cbd5e1;
         background: #fff !important;
+        overflow: hidden;
       }
       .sp-print-page .sticker-card .sticker-barcode-row svg {
         max-width: 100%;
-        height: 22px !important;
+        height: 26px !important;
+        display: block;
+        margin: 0 auto;
+      }
+      .sp-print-page .sticker-card .sticker-barcode-row span {
+        display: block;
+        font-size: 8pt;
+        font-weight: 700;
+        color: #0d2b45;
+        letter-spacing: 1.5px;
       }
       .sp-print-page .sticker-card .sticker-footer {
-        padding: 2px 6px !important;
+        padding: 4px 8px !important;
         background: #f1f4f8 !important;
         border-top: 1px solid #cbd5e1;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        font-size: 7.2pt !important;
+        font-size: 8.5pt !important;
         -webkit-print-color-adjust: exact !important;
       }
       .sp-print-page .sticker-card .sticker-footer .sf-room {
@@ -612,7 +636,7 @@
 
       /* ─── ROOM SHEET PRINT LAYOUT (A4 Portrait) ─── */
       .room-sheet-print {
-        page: portraitSheet;
+
         padding: 8mm 10mm !important;
         font-family: 'Source Sans 3', Arial, sans-serif;
         font-size: 9.2pt;
@@ -644,7 +668,7 @@
 
       /* ─── CENTER SUMMARY PRINT LAYOUT (A4 Portrait) ─── */
       .center-summary-print {
-        page: portraitSheet;
+
         padding: 8mm 10mm !important;
         font-family: 'Source Sans 3', Arial, sans-serif;
         font-size: 9pt;
@@ -793,21 +817,21 @@
           <div class="fg-grid">
             <div class="fg">
               <label for="cfg-num-rooms">Number of Rooms</label>
-              <input type="number" id="cfg-num-rooms" min="1" max="50" value="1" onchange="renderRoomNames()">
+              <input type="number" id="cfg-num-rooms" min="1" max="50" value="1" onchange="onRoomCountChange()">
             </div>
-            <div class="fg">
-              <label for="cfg-seats-per-room">Seats Per Room</label>
-              <input type="number" id="cfg-seats-per-room" min="1" max="200" value="30" onchange="renderRoomNames()">
-            </div>
+          </div>
+
+          <div id="room-distribution-info" style="margin-top:14px;padding:10px 14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;font-size:.79rem;color:#1d4ed8;display:none;">
           </div>
 
           <div id="room-names-area" style="margin-top:18px;">
-            <p style="font-size:.78rem;font-weight:600;color:var(--navy);margin-bottom:10px;">Room Names <span style="font-weight:400;color:var(--muted);">(edit as needed)</span></p>
-            <div id="room-names-grid" class="fg-grid"></div>
+            <p style="font-size:.78rem;font-weight:600;color:var(--navy);margin-bottom:10px;">Room Names & Seat Capacity <span style="font-weight:400;color:var(--muted);">(edit as needed — seats auto-distribute evenly)</span></p>
+            <div id="room-names-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;"></div>
           </div>
 
           <div class="btn-row">
-            <button class="btn btn-success" onclick="generateSeatPlan()">Generate Seat Plan</button>
+            <button class="btn btn-outline btn-sm" onclick="autoDistributeSeats()" title="Evenly re-distribute all students across rooms"><i class="fas fa-balance-scale"></i> Auto-Distribute Seats</button>
+            <button class="btn btn-success" onclick="generateSeatPlan()"><i class="fas fa-check-circle"></i> Generate Seat Plan</button>
           </div>
         </div>
       </div>
@@ -840,13 +864,24 @@
       <div id="stickers-alert"></div>
 
       <div class="card no-print" style="margin-bottom:16px;">
-        <div class="card-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
-          <div>
-            <p style="font-size:.84rem;font-weight:600;color:var(--navy);">Seat Sticker Sheets</p>
-            <p style="font-size:.76rem;color:var(--muted);margin-top:2px;">9 stickers per A4 page (3 × 3). Each sticker shows student photo, name, roll, reg, class, group, father's name, room and seat number with barcode.</p>
+        <div class="card-body">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px;">
+            <div>
+              <p style="font-size:.88rem;font-weight:700;color:var(--navy);">Seat Sticker Sheets</p>
+              <p style="font-size:.76rem;color:var(--muted);margin-top:2px;">9 stickers per A4 page (3 × 3). Each sticker shows student photo, name, roll, reg, class, group, father's name, room, seat number & barcode.</p>
+            </div>
+            <div id="stickers-count-badge" style="font-size:.78rem;font-weight:600;padding:4px 10px;background:#e0f2fe;color:#0369a1;border-radius:20px;"></div>
           </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="btn btn-primary" onclick="printStickers()">Print Stickers</button>
+          <div class="room-select-row" style="margin-bottom:0;">
+            <div class="fg" style="min-width:240px;">
+              <label for="sticker-room-select" style="font-weight:600;color:var(--navy);">Select Hall / Room to Print</label>
+              <select id="sticker-room-select" onchange="onStickerRoomChange()">
+                <option value="all">-- All Rooms / Halls (Full Center) --</option>
+              </select>
+            </div>
+            <button class="btn btn-primary" onclick="printStickers()" style="align-self:flex-end;">
+              <i class="fas fa-print"></i> Print Stickers
+            </button>
           </div>
         </div>
       </div>
@@ -1003,7 +1038,10 @@
       $('tab-' + name).classList.add('active');
       $('panel-' + name).classList.add('active');
       // Refresh views when switching
-      if (name === 'stickers' && seatPlan.length) renderStickersPreview();
+      if (name === 'stickers' && seatPlan.length) {
+        populateStickerRoomSelect();
+        renderStickersPreview();
+      }
       if (name === 'roomsheet' && seatPlan.length) populateRoomSelect();
       if (name === 'summary' && seatPlan.length) renderSummaryScreen();
     }
@@ -1109,9 +1147,9 @@
         $('total-students-badge').textContent = `${count} students`;
         $('room-config-card').style.display = 'block';
 
-        // Auto-suggest number of rooms
-        const seats = parseInt($('cfg-seats-per-room').value) || 30;
-        const rooms = Math.ceil(count / seats);
+        // Auto-suggest number of rooms (~30 students per room)
+        const defaultSeatsPerRoom = 30;
+        const rooms = Math.ceil(count / defaultSeatsPerRoom);
         $('cfg-num-rooms').value = rooms;
         renderRoomNames();
 
@@ -1122,25 +1160,104 @@
     }
 
     // ══════════════════════════════════════════════════
-    // ROOM NAME INPUTS
+    // ROOM NAME + CAPACITY INPUTS
     // ══════════════════════════════════════════════════
+    function onRoomCountChange() {
+      renderRoomNames();
+      updateDistributionInfo();
+    }
+
     function renderRoomNames() {
       const n   = parseInt($('cfg-num-rooms').value) || 1;
       const grid = $('room-names-grid');
       // Preserve existing values
-      const existing = [];
-      grid.querySelectorAll('input').forEach(inp => existing.push(inp.value));
+      const existingNames = [];
+      const existingCaps  = [];
+      grid.querySelectorAll('input[data-role="name"]').forEach(inp => existingNames.push(inp.value));
+      grid.querySelectorAll('input[data-role="cap"]').forEach(inp => existingCaps.push(inp.value));
       grid.innerHTML = '';
+
+      const totalStudents = allStudents.length;
+      const basePerRoom = totalStudents > 0 ? Math.floor(totalStudents / n) : 30;
+      const remainder   = totalStudents > 0 ? totalStudents % n : 0;
+
       for (let i = 0; i < n; i++) {
+        const defaultCap = totalStudents > 0 ? (basePerRoom + (i < remainder ? 1 : 0)) : 30;
         const fg = document.createElement('div');
-        fg.className = 'fg';
-        fg.innerHTML = `<label>Room ${i + 1} Name</label><input type="text" id="room-name-${i}" value="${existing[i] || ('Room ' + (i + 1))}" placeholder="Room ${i + 1}">`;
+        fg.style.cssText = 'display:flex;gap:8px;align-items:flex-end;';
+        fg.innerHTML = `
+          <div class="fg" style="flex:1;">
+            <label>Room ${i + 1} Name</label>
+            <input type="text" data-role="name" id="room-name-${i}" value="${existingNames[i] || ('Room ' + (i + 1))}" placeholder="Room ${i + 1}">
+          </div>
+          <div class="fg" style="width:90px;">
+            <label>Seats</label>
+            <input type="number" data-role="cap" id="room-cap-${i}" min="1" max="200" value="${existingCaps[i] || defaultCap}" onchange="updateDistributionInfo()" style="text-align:center;font-weight:600;">
+          </div>`;
         grid.appendChild(fg);
       }
+      updateDistributionInfo();
+    }
+
+    function getPerRoomCapacities() {
+      const n = parseInt($('cfg-num-rooms').value) || 1;
+      const caps = [];
+      for (let i = 0; i < n; i++) {
+        const inp = $(`room-cap-${i}`);
+        caps.push(inp ? (parseInt(inp.value) || 30) : 30);
+      }
+      return caps;
+    }
+
+    function autoDistributeSeats() {
+      const n = parseInt($('cfg-num-rooms').value) || 1;
+      const totalStudents = allStudents.length;
+      if (totalStudents === 0) {
+        setAlert('configure-alert', 'info', 'Load students first to auto-distribute seats.');
+        return;
+      }
+      const basePerRoom = Math.floor(totalStudents / n);
+      const remainder   = totalStudents % n;
+      for (let i = 0; i < n; i++) {
+        const inp = $(`room-cap-${i}`);
+        if (inp) inp.value = basePerRoom + (i < remainder ? 1 : 0);
+      }
+      updateDistributionInfo();
+      setAlert('configure-alert', 'ok', `Seats evenly distributed: ${basePerRoom}${remainder > 0 ? ` (+1 extra in first ${remainder} room${remainder > 1 ? 's' : ''})` : ''} per room.`);
+    }
+
+    function updateDistributionInfo() {
+      const infoEl = $('room-distribution-info');
+      if (!infoEl) return;
+      const totalStudents = allStudents.length;
+      if (totalStudents === 0) { infoEl.style.display = 'none'; return; }
+
+      const caps = getPerRoomCapacities();
+      const totalCap = caps.reduce((s, c) => s + c, 0);
+      const diff = totalCap - totalStudents;
+
+      let html = `<strong>Students:</strong> ${totalStudents} &nbsp;|&nbsp; <strong>Total Seats:</strong> ${totalCap} &nbsp;|&nbsp; `;
+      if (diff === 0) {
+        html += `<span style="color:#166534;">✓ Perfect fit — all students have seats.</span>`;
+      } else if (diff > 0) {
+        html += `<span style="color:#92400e;">⚠ ${diff} extra seat${diff !== 1 ? 's' : ''} (some rooms won't be full).</span>`;
+      } else {
+        html += `<span style="color:#b91c1c;">✗ ${Math.abs(diff)} student${Math.abs(diff) !== 1 ? 's' : ''} won't get a seat! Increase seats or add more rooms.</span>`;
+      }
+      // Show per-room breakdown
+      html += '<div style="margin-top:6px;font-size:.74rem;color:#334155;">';
+      caps.forEach((c, i) => {
+        const nameInp = $(`room-name-${i}`);
+        const name = nameInp ? nameInp.value : `Room ${i+1}`;
+        html += `<span style="display:inline-block;margin-right:12px;margin-bottom:2px;"><strong>${escHtml(name)}:</strong> ${c} seats</span>`;
+      });
+      html += '</div>';
+      infoEl.innerHTML = html;
+      infoEl.style.display = 'block';
     }
 
     // ══════════════════════════════════════════════════
-    // GENERATE SEAT PLAN
+    // GENERATE SEAT PLAN (uses per-room capacities)
     // ══════════════════════════════════════════════════
     function generateSeatPlan() {
       if (!allStudents.length) {
@@ -1152,8 +1269,8 @@
       examDate   = $('cfg-exam-date').value           || '';
       centerName = $('cfg-center-name').value.trim() || collegeName;
 
-      const numRooms      = parseInt($('cfg-num-rooms').value)      || 1;
-      const seatsPerRoom  = parseInt($('cfg-seats-per-room').value) || 30;
+      const numRooms = parseInt($('cfg-num-rooms').value) || 1;
+      const caps     = getPerRoomCapacities();
 
       // Collect room names
       const roomNames = [];
@@ -1162,17 +1279,28 @@
         roomNames.push(inp ? inp.value.trim() || `Room ${i + 1}` : `Room ${i + 1}`);
       }
 
-      // Assign students to rooms sequentially (sorted by roll)
-      seatPlan = roomNames.map(name => ({ roomName: name, students: [] }));
-      allStudents.forEach((stu, idx) => {
-        const roomIdx = Math.floor(idx / seatsPerRoom);
-        const seatNo  = (idx % seatsPerRoom) + 1;
-        if (roomIdx < seatPlan.length) {
-          seatPlan[roomIdx].students.push({ student: stu, seatNo });
-        }
-      });
+      // Check total capacity
+      const totalCap = caps.reduce((s, c) => s + c, 0);
+      if (totalCap < allStudents.length) {
+        setAlert('configure-alert', 'err', `Total seat capacity (${totalCap}) is less than the number of students (${allStudents.length}). Please increase seats or add more rooms.`);
+        return;
+      }
 
-      // Filter out empty rooms
+      // Assign students to rooms based on per-room capacities
+      seatPlan = roomNames.map(name => ({ roomName: name, students: [] }));
+      let studentIdx = 0;
+      for (let r = 0; r < numRooms && studentIdx < allStudents.length; r++) {
+        const cap = caps[r];
+        for (let s = 0; s < cap && studentIdx < allStudents.length; s++) {
+          seatPlan[r].students.push({
+            student: allStudents[studentIdx],
+            seatNo: s + 1
+          });
+          studentIdx++;
+        }
+      }
+
+      // Filter out empty rooms (in case user added extra empty rooms)
       seatPlan = seatPlan.filter(r => r.students.length > 0);
 
       // Show overview tiles
@@ -1180,10 +1308,11 @@
       $('plan-summary-badge').textContent = `${seatPlan.length} rooms · ${totalSeats} students`;
 
       const tilesEl = $('rooms-overview-tiles');
-      tilesEl.innerHTML = seatPlan.map(r =>
+      tilesEl.innerHTML = seatPlan.map((r, i) =>
         `<div class="room-tile">
           <div class="rt-name">${escHtml(r.roomName)}</div>
           <div class="rt-count">${r.students.length} student${r.students.length !== 1 ? 's' : ''}</div>
+          <div style="font-size:.68rem;color:var(--muted);margin-top:2px;">Roll: ${escHtml(r.students[0].student.roll)} – ${escHtml(r.students[r.students.length-1].student.roll)}</div>
         </div>`
       ).join('');
 
@@ -1192,6 +1321,7 @@
 
       // Immediately pre-populate and build print and screen views
       populateRoomSelect();
+      populateStickerRoomSelect();
       renderStickersPreview();
       buildPrintStickerPages();
       renderSummaryScreen();
@@ -1248,7 +1378,81 @@
     }
 
     // ══════════════════════════════════════════════════
-    // RENDER STICKERS (SCREEN PREVIEW)
+    // STICKER ROOM SELECT & FILTERING (HALL-WISE)
+    // ══════════════════════════════════════════════════
+    function populateStickerRoomSelect() {
+      const sel = $('sticker-room-select');
+      if (!sel) return;
+      const prev = sel.value;
+      sel.innerHTML = '<option value="all">-- All Rooms / Halls (Full Center) --</option>';
+      seatPlan.forEach((room, idx) => {
+        const opt = document.createElement('option');
+        opt.value = String(idx);
+        opt.textContent = `${room.roomName} (${room.students.length} students)`;
+        sel.appendChild(opt);
+      });
+      if (prev !== '' && (prev === 'all' || seatPlan[parseInt(prev)])) {
+        sel.value = prev;
+      } else {
+        sel.value = 'all';
+      }
+      updateStickerBadge();
+    }
+
+    function onStickerRoomChange() {
+      updateStickerBadge();
+      renderStickersPreview();
+      buildPrintStickerPages();
+    }
+
+    function getSelectedStickerSeats() {
+      const sel = $('sticker-room-select');
+      const val = sel ? sel.value : 'all';
+      const seats = [];
+
+      if (val === 'all') {
+        seatPlan.forEach(room => {
+          room.students.forEach(entry => {
+            seats.push({ roomName: room.roomName, seatNo: entry.seatNo, student: entry.student });
+          });
+        });
+      } else {
+        const idx = parseInt(val);
+        if (!isNaN(idx) && seatPlan[idx]) {
+          const room = seatPlan[idx];
+          room.students.forEach(entry => {
+            seats.push({ roomName: room.roomName, seatNo: entry.seatNo, student: entry.student });
+          });
+        }
+      }
+      return seats;
+    }
+
+    function updateStickerBadge() {
+      const badge = $('stickers-count-badge');
+      if (!badge) return;
+      if (!seatPlan.length) {
+        badge.textContent = '';
+        return;
+      }
+      const sel = $('sticker-room-select');
+      const val = sel ? sel.value : 'all';
+      if (val === 'all') {
+        const total = seatPlan.reduce((sum, r) => sum + r.students.length, 0);
+        const pages = Math.ceil(total / 9);
+        badge.textContent = `All Halls: ${total} stickers (${pages} page${pages !== 1 ? 's' : ''})`;
+      } else {
+        const idx = parseInt(val);
+        if (!isNaN(idx) && seatPlan[idx]) {
+          const count = seatPlan[idx].students.length;
+          const pages = Math.ceil(count / 9);
+          badge.textContent = `${seatPlan[idx].roomName}: ${count} stickers (${pages} page${pages !== 1 ? 's' : ''})`;
+        }
+      }
+    }
+
+    // ══════════════════════════════════════════════════
+    // RENDER STICKERS (SCREEN PREVIEW - HALL WISE)
     // ══════════════════════════════════════════════════
     function renderStickersPreview() {
       if (!seatPlan.length) {
@@ -1256,13 +1460,11 @@
         return;
       }
 
-      // Flatten all seat entries
-      const allSeats = [];
-      seatPlan.forEach(room => {
-        room.students.forEach(entry => {
-          allSeats.push({ roomName: room.roomName, seatNo: entry.seatNo, student: entry.student });
-        });
-      });
+      const allSeats = getSelectedStickerSeats();
+      if (!allSeats.length) {
+        $('stickers-container').innerHTML = '<div class="empty-state"><p>No students in the selected hall / room.</p></div>';
+        return;
+      }
 
       // Build page groups of 9
       const pages = [];
@@ -1270,10 +1472,18 @@
         pages.push(allSeats.slice(i, i + 9));
       }
 
+      const sel = $('sticker-room-select');
+      const hallLabel = (sel && sel.value !== 'all' && seatPlan[parseInt(sel.value)])
+        ? seatPlan[parseInt(sel.value)].roomName
+        : 'All Halls';
+
       let html = '';
       pages.forEach((page, pi) => {
         html += `<div class="card" style="margin-bottom:20px;">
-          <div class="card-head"><h3>Page ${pi + 1} <span style="font-weight:400;font-size:.78rem;color:var(--muted);">(${page.length} sticker${page.length !== 1 ? 's' : ''})</span></h3></div>
+          <div class="card-head">
+            <h3>Page ${pi + 1} of ${pages.length} <span style="font-weight:400;font-size:.78rem;color:var(--muted);">(${page.length} sticker${page.length !== 1 ? 's' : ''})</span></h3>
+            <span class="meta">${escHtml(hallLabel)}</span>
+          </div>
           <div class="card-body">
             <div class="sticker-preview-grid">`;
         page.forEach((entry, si) => {
@@ -1293,25 +1503,29 @@
         const el = document.getElementById(bcId);
         if (el && entry.student.roll) {
           try {
-            JsBarcode(`#${bcId}`, entry.student.roll, {
+            JsBarcode(`#${bcId}`, String(entry.student.roll), {
               format: 'CODE128', lineColor: '#0d2b45',
-              width: 1.4, height: 28, displayValue: false, margin: 0
+              width: 1.5, height: 30, displayValue: true,
+              fontSize: 11, textMargin: 2, margin: 0,
+              font: 'Source Sans 3'
             });
-          } catch(e) {}
+          } catch(e) {
+            // Fallback: show roll number as text if barcode fails
+            el.outerHTML = `<span style="font-size:9pt;font-weight:700;color:#0d2b45;letter-spacing:1.5px;">${escHtml(String(entry.student.roll))}</span>`;
+          }
         }
       });
     }
 
     // ══════════════════════════════════════════════════
-    // BUILD PRINT STICKER PAGES
+    // BUILD PRINT STICKER PAGES (HALL WISE)
     // ══════════════════════════════════════════════════
     function buildPrintStickerPages() {
-      const allSeats = [];
-      seatPlan.forEach(room => {
-        room.students.forEach(entry => {
-          allSeats.push({ roomName: room.roomName, seatNo: entry.seatNo, student: entry.student });
-        });
-      });
+      const allSeats = getSelectedStickerSeats();
+      if (!allSeats.length) {
+        $('sticker-print-area').innerHTML = '';
+        return;
+      }
 
       const pages = [];
       for (let i = 0; i < allSeats.length; i += 9) {
@@ -1332,9 +1546,15 @@
         html += `</div>`;
       });
 
-      $('sticker-print-area').innerHTML = html;
+      const printArea = $('sticker-print-area');
+      // Temporarily make visible so JsBarcode can compute SVG dimensions
+      printArea.style.display = 'block';
+      printArea.style.position = 'absolute';
+      printArea.style.left = '-9999px';
+      printArea.style.visibility = 'hidden';
+      printArea.innerHTML = html;
 
-      // Render barcodes in print area
+      // Render barcodes in print area (now visible in DOM)
       allSeats.forEach((entry, idx) => {
         const pi = Math.floor(idx / 9);
         const si = idx % 9;
@@ -1344,11 +1564,22 @@
           try {
             JsBarcode(`#${bcId}`, String(entry.student.roll), {
               format: 'CODE128', lineColor: '#0d2b45',
-              width: 1.3, height: 22, displayValue: false, margin: 0
+              width: 1.4, height: 24, displayValue: true,
+              fontSize: 9.5, textMargin: 1, margin: 0,
+              font: 'Source Sans 3'
             });
-          } catch(e) {}
+          } catch(e) {
+            // Fallback: show roll number as text if barcode fails
+            el.outerHTML = `<span style="font-size:8.5pt;font-weight:700;color:#0d2b45;letter-spacing:1.5px;">${escHtml(String(entry.student.roll))}</span>`;
+          }
         }
       });
+
+      // Restore hidden state (CSS will show it during print)
+      printArea.style.display = '';
+      printArea.style.position = '';
+      printArea.style.left = '';
+      printArea.style.visibility = '';
     }
 
     function setPrintPageOrientation(orientation) {
@@ -1376,9 +1607,10 @@
       document.body.classList.remove('print-roomsheet', 'print-summary');
       document.body.classList.add('print-stickers');
 
+      // Allow extra time for barcodes and images to fully render
       setTimeout(() => {
         window.print();
-      }, 150);
+      }, 400);
     }
 
     // ══════════════════════════════════════════════════

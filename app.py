@@ -416,6 +416,11 @@ def index():
 def login_page():
     return _serve_html('login.html', inject_api=False)
 
+@app.route('/FL_Over Building.jpg')
+@app.route('/FL_Over%20Building.jpg')
+def fl_over_building_image():
+    return send_from_directory(BASE_DIR, 'FL_Over Building.jpg')
+
 @app.route('/result')
 def result_page():
     return _serve_html('result.html')
