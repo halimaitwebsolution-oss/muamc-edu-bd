@@ -112,6 +112,39 @@
       border-color: rgba(255,255,255,.6);
     }
 
+    .hdr-hamburger {
+      display: none;
+      background: rgba(255,255,255,.14);
+      border: 1px solid rgba(255,255,255,.28);
+      color: #fff;
+      padding: 7px 13px;
+      border-radius: var(--r);
+      font-size: .8rem;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all .15s;
+      letter-spacing: .02em;
+    }
+
+    .hdr-hamburger:hover {
+      background: rgba(255,255,255,.24);
+      border-color: rgba(255,255,255,.5);
+    }
+
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.5);
+      z-index: 195;
+      backdrop-filter: blur(2px);
+    }
+
+    .sidebar-overlay.active {
+      display: block;
+    }
+
     /* Sidebar Navigation */
     .site-header {
       background: linear-gradient(180deg, #0d2b45 0%, #0a2138 100%);
@@ -437,14 +470,97 @@
     }
 
     @media (max-width: 768px) {
+      .top-nav-bar {
+        padding: 0 14px;
+        height: 60px;
+      }
+      .hdr-hamburger {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .top-nav-logo {
+        gap: 10px;
+      }
+      .top-nav-logo-text h1 {
+        font-size: .8rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 180px;
+      }
+      .top-nav-logo-text p {
+        display: none;
+      }
+      .top-nav-admin {
+        gap: 8px;
+      }
+      .top-nav-badge {
+        display: none;
+      }
+      .logout-btn {
+        padding: 6px 12px;
+        font-size: .72rem;
+      }
       .site-header {
-        position: static;
-        width: 100%;
-        height: auto;
+        position: fixed;
+        left: 0;
+        top: 60px;
+        width: 240px;
+        height: calc(100vh - 60px);
+        transform: translateX(-100%);
+        transition: transform .25s ease;
+        z-index: 200;
+      }
+      .site-header.active {
+        transform: translateX(0);
       }
       .main {
         margin-left: 0;
-        padding: 16px;
+        margin-top: 60px;
+        padding: 14px 12px;
+      }
+      .card {
+        margin-bottom: 16px;
+      }
+      .card-head {
+        padding: 12px 14px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+      }
+      .card-body {
+        padding: 14px;
+      }
+      .fg-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+      .btn-row {
+        flex-direction: column;
+        gap: 8px;
+      }
+      .btn-row .btn {
+        width: 100%;
+      }
+      .data-tbl {
+        min-width: 760px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .top-nav-logo-text h1 {
+        max-width: 130px;
+        font-size: .74rem;
+      }
+      .input-with-btn {
+        flex-direction: column;
+      }
+      .input-with-btn .btn {
+        width: 100%;
+      }
+      .search-row input {
+        font-size: .8rem;
       }
     }
   </style>
@@ -453,6 +569,7 @@
   <!-- Top Navigation Bar -->
   <div class="top-nav-bar">
     <div class="top-nav-logo">
+      <button class="hdr-hamburger" id="hdr-hamburger" onclick="toggleSidebar()" aria-label="Toggle navigation">Menu</button>
       <div class="top-nav-logo-text">
         <h1>Moinuddin Adarsha Mohila College, Sylhet</h1>
         <p>Academic Management System &bull; Admin Panel</p>
@@ -465,7 +582,7 @@
   </div>
 
   <!-- Sidebar Navigation -->
-  <header class="site-header">
+  <header class="site-header" id="site-header">
     <nav class="nav-strip">
       <a class="nt" href="/">Dashboard</a>
       <a class="nt" href="/student-list.html">Student Management</a>
@@ -483,14 +600,10 @@
       <a class="nt" href="/exam_attt_sheet.html">Exam Attendance</a>
     </nav>
   </header>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
 
   <!-- Main Content -->
   <main class="main">
-    <div class="pg-hd">
-      <h2>Subject Teacher Account Management</h2>
-      <p>Configure subject teachers and manage separate passwords for their mark input panels.</p>
-    </div>
-
     <!-- Add / Edit Teacher Card -->
     <div class="card">
       <div class="card-head">
@@ -870,6 +983,24 @@
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
     }
+
+    function toggleSidebar() {
+      const header = document.getElementById('site-header');
+      const overlay = document.getElementById('sidebar-overlay');
+      if (header) header.classList.toggle('active');
+      if (overlay) overlay.classList.toggle('active');
+    }
+
+    function closeSidebar() {
+      const header = document.getElementById('site-header');
+      const overlay = document.getElementById('sidebar-overlay');
+      if (header) header.classList.remove('active');
+      if (overlay) overlay.classList.remove('active');
+    }
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeSidebar();
+    });
 
     window.addEventListener('DOMContentLoaded', loadTeachers);
   </script>
