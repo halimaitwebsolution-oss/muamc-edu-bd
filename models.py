@@ -331,3 +331,30 @@ class ExamRoutine(db.Model):
             'entries':     json.loads(self.entries or '[]'),
             'uploaded_at': self.uploaded_at.strftime('%d/%m/%Y %I:%M %p') if self.uploaded_at else '',
         }
+
+
+class SubjectTeacher(db.Model):
+    """Subject-wise teacher accounts for mark entry."""
+    __tablename__ = 'subject_teachers'
+
+    id           = db.Column(db.String(50),  primary_key=True)
+    teacher_name = db.Column(db.String(255), nullable=False)
+    subject_name = db.Column(db.String(100), nullable=False)
+    password     = db.Column(db.String(255), nullable=False)
+    phone        = db.Column(db.String(50),  default='')
+    email        = db.Column(db.String(100), default='')
+    created_at   = db.Column(db.DateTime,    default=datetime.utcnow)
+    updated_at   = db.Column(db.DateTime,    default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id':          self.id,
+            'teacherName': self.teacher_name,
+            'subjectName': self.subject_name,
+            'password':    self.password,
+            'phone':       self.phone or '',
+            'email':       self.email or '',
+            'createdAt':   self.created_at.strftime('%d/%m/%Y') if self.created_at else '',
+            'updatedAt':   self.updated_at.strftime('%d/%m/%Y') if self.updated_at else '',
+        }
+

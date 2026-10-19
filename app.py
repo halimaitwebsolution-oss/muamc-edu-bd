@@ -12,6 +12,7 @@ Open the HTML file served at http://localhost:5000/
 """
 
 import os
+import time
 import uuid
 import base64
 import secrets
@@ -36,12 +37,13 @@ from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
-from models import db, Student, Mark, Teacher, Setting, Archive, PromotionLog, AdmissionApplication, ExamRoutine
+from models import db, Student, Mark, Teacher, Setting, Archive, PromotionLog, AdmissionApplication, ExamRoutine, SubjectTeacher
 
 # ─────────────────────────────────────────────
 # App Setup
 # ─────────────────────────────────────────────
 app = Flask(__name__, static_folder='static')
+app.url_map.strict_slashes = False
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Database Configuration
@@ -103,8 +105,7 @@ if _db_url.startswith('postgresql'):
 # Secret key for server-side session (session cookie auth)
 app.secret_key = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
 
-# ── Session cookie hardening (ISSUE-006) ───────────────────────────
-app.config['SESSION_COOKIE_SECURE']    = not _db_url.startswith('sqlite')  # True in prod (HTTPS)
+app.config['SESSION_COOKIE_SECURE']    = os.environ.get('COOKIE_SECURE', 'false').lower() == 'true'
 app.config['SESSION_COOKIE_HTTPONLY']  = True   # Prevent JS access
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # CSRF protection
 app.config['PERMANENT_SESSION_LIFETIME'] = 28800  # 8-hour session timeout
@@ -527,16 +528,46 @@ def application_copy_page():
     """Public printable admission application copy — student can view/print their admission form."""
     return _serve_html('application-copy.html', inject_api=True)
 
+@app.route('/teacher-login')
+@app.route('/teacher-login.html')
+def teacher_login_route():
+    """Subject Teacher Login page."""
+    return _serve_html('teacher-login.html', inject_api=False)
+
+@app.route('/teacher_panel_update')
+@app.route('/teacher_panel_update.html')
+def teacher_panel_update_route():
+    """Admin Subject Teachers Management page."""
+    if not session.get('authenticated'):
+        return redirect('/login')
+    if session.get('role') != 'admin':
+        return redirect('/teacher-panel.html' if session.get('role') == 'teacher' else '/login')
+    return _serve_html('teacher_panel_update.html', inject_api=True)
+
+@app.route('/teacher-panel')
+@app.route('/teacher-panel.html')
+def teacher_panel_route():
+    """Subject Teacher Batch Marks Input Panel."""
+    if not session.get('authenticated'):
+        return redirect('/teacher-login.html')
+    if session.get('role') not in ('teacher', 'admin'):
+        return redirect('/teacher-login.html')
+    return _serve_html('teacher-panel.html', inject_api=True)
+
 @app.route('/<path:page>')
 def html_pages(page):
     # Only serve .html files from BASE_DIR; prevent directory traversal
     if not page.endswith('.html') or '/' in page or '..' in page:
         abort(404)
-    # Auth-gate any .html page that is not the login or student-portal page
-    if page not in ('login.html', 'student-portal.html', 'result_summery.html', 'std_result_view.html', 'admission.html', 'application-copy.html') and not session.get('authenticated'):
+    # Auth-gate any .html page that is not public
+    public_pages = ('login.html', 'teacher-login.html', 'student-portal.html', 'result_summery.html', 'std_result_view.html', 'admission.html', 'application-copy.html')
+    if page not in public_pages and not session.get('authenticated'):
         return redirect('/login')
+    # If teacher role tries to access admin-only pages, redirect to teacher panel
+    if session.get('role') == 'teacher' and page not in ('teacher-panel.html', 'login.html', 'teacher-login.html'):
+        return redirect('/teacher-panel.html')
     # Use _serve_html to ensure the global font and API scripts are correctly injected
-    return _serve_html(page, inject_api=(page not in ('login.html', 'student-portal.html', 'result_summery.html', 'std_result_view.html')))
+    return _serve_html(page, inject_api=(page not in ('login.html', 'teacher-login.html', 'student-portal.html', 'result_summery.html', 'std_result_view.html')))
 
 
 # ─────────────────────────────────────────────
@@ -1133,8 +1164,572 @@ def logout():
 def auth_status():
     return jsonify({
         'authenticated': session.get('authenticated', False),
-        'role': session.get('role', None)
+        'role': session.get('role', None),
+        'teacherName': session.get('teacher_name', ''),
+        'subjectName': session.get('teacher_subject', '')
     })
+
+
+# ─────────────────────────────────────────────
+# SUBJECT TEACHER AUTH & MANAGEMENT API
+# ─────────────────────────────────────────────
+
+TEACHER_CANONICAL_SUBJECTS = {
+    'Bangla': {
+        'name': 'Bangla',
+        'groups': ['Science', 'Humanities', 'Business'],
+        'papers': {
+            'Class-XI':  {'name': 'Bangla 1st Paper', 'code': '101', 'hasPrac': False, 'cqMax': 70, 'mcqMax': 30},
+            'Class-XII': {'name': 'Bangla 2nd Paper', 'code': '102', 'hasPrac': False, 'cqMax': 70, 'mcqMax': 30},
+        }
+    },
+    'English': {
+        'name': 'English',
+        'groups': ['Science', 'Humanities', 'Business'],
+        'papers': {
+            'Class-XI':  {'name': 'English 1st Paper', 'code': '107', 'hasPrac': False, 'cqMax': 100, 'mcqMax': 0},
+            'Class-XII': {'name': 'English 2nd Paper', 'code': '108', 'hasPrac': False, 'cqMax': 100, 'mcqMax': 0},
+        }
+    },
+    'Information & Communication Technology (ICT)': {
+        'name': 'Information & Communication Technology (ICT)',
+        'groups': ['Science', 'Humanities', 'Business'],
+        'papers': {
+            'Class-XI':  {'name': 'Information & Communication Technology (ICT)', 'code': '275', 'hasPrac': True, 'cqMax': 50, 'mcqMax': 25},
+            'Class-XII': {'name': 'Information & Communication Technology (ICT)', 'code': '275', 'hasPrac': True, 'cqMax': 50, 'mcqMax': 25},
+        }
+    },
+    'ICT': {
+        'name': 'Information & Communication Technology (ICT)',
+        'groups': ['Science', 'Humanities', 'Business'],
+        'papers': {
+            'Class-XI':  {'name': 'Information & Communication Technology (ICT)', 'code': '275', 'hasPrac': True, 'cqMax': 50, 'mcqMax': 25},
+            'Class-XII': {'name': 'Information & Communication Technology (ICT)', 'code': '275', 'hasPrac': True, 'cqMax': 50, 'mcqMax': 25},
+        }
+    },
+    'Physics': {
+        'name': 'Physics',
+        'groups': ['Science'],
+        'papers': {
+            'Class-XI':  {'name': 'Physics 1st Paper', 'code': '174', 'hasPrac': True, 'cqMax': 50, 'mcqMax': 25},
+            'Class-XII': {'name': 'Physics 2nd Paper', 'code': '175', 'hasPrac': True, 'cqMax': 50, 'mcqMax': 25},
+        }
+    },
+    'Chemistry': {
+        'name': 'Chemistry',
+        'groups': ['Science'],
+        'papers': {
+            'Class-XI':  {'name': 'Chemistry 1st Paper', 'code': '176', 'hasPrac': True, 'cqMax': 50, 'mcqMax': 25},
+            'Class-XII': {'name': 'Chemistry 2nd Paper', 'code': '177', 'hasPrac': True, 'cqMax': 50, 'mcqMax': 25},
+        }
+    },
+    'Biology': {
+        'name': 'Biology',
+        'groups': ['Science'],
+        'papers': {
+            'Class-XI':  {'name': 'Biology 1st Paper', 'code': '178', 'hasPrac': True, 'cqMax': 50, 'mcqMax': 25},
+            'Class-XII': {'name': 'Biology 2nd Paper', 'code': '179', 'hasPrac': True, 'cqMax': 50, 'mcqMax': 25},
+        }
+    },
+    'Higher Mathematics': {
+        'name': 'Higher Mathematics',
+        'groups': ['Science'],
+        'papers': {
+            'Class-XI':  {'name': 'Higher Math 1st Paper', 'code': '265', 'hasPrac': True, 'cqMax': 50, 'mcqMax': 25},
+            'Class-XII': {'name': 'Higher Math 2nd Paper', 'code': '266', 'hasPrac': True, 'cqMax': 50, 'mcqMax': 25},
+        }
+    },
+    'Higher Math': {
+        'name': 'Higher Mathematics',
+        'groups': ['Science'],
+        'papers': {
+            'Class-XI':  {'name': 'Higher Math 1st Paper', 'code': '265', 'hasPrac': True, 'cqMax': 50, 'mcqMax': 25},
+            'Class-XII': {'name': 'Higher Math 2nd Paper', 'code': '266', 'hasPrac': True, 'cqMax': 50, 'mcqMax': 25},
+        }
+    },
+    'Civics & Good Governance': {
+        'name': 'Civics & Good Governance',
+        'groups': ['Humanities'],
+        'papers': {
+            'Class-XI':  {'name': 'Civics & Good Governance 1st', 'code': '269', 'hasPrac': False, 'cqMax': 70, 'mcqMax': 30},
+            'Class-XII': {'name': 'Civics & Good Governance 2nd', 'code': '270', 'hasPrac': False, 'cqMax': 70, 'mcqMax': 30},
+        }
+    },
+    'Civics': {
+        'name': 'Civics & Good Governance',
+        'groups': ['Humanities'],
+        'papers': {
+            'Class-XI':  {'name': 'Civics & Good Governance 1st', 'code': '269', 'hasPrac': False, 'cqMax': 70, 'mcqMax': 30},
+            'Class-XII': {'name': 'Civics & Good Governance 2nd', 'code': '270', 'hasPrac': False, 'cqMax': 70, 'mcqMax': 30},
+        }
+    },
+    'Economics': {
+        'name': 'Economics',
+        'groups': ['Humanities', 'Business'],
+        'papers': {
+            'Class-XI':  {'name': 'Economics 1st Paper', 'code': '109', 'hasPrac': False, 'cqMax': 70, 'mcqMax': 30},
+            'Class-XII': {'name': 'Economics 2nd Paper', 'code': '110', 'hasPrac': False, 'cqMax': 70, 'mcqMax': 30},
+        }
+    },
+    'Sociology': {
+        'name': 'Sociology',
+        'groups': ['Humanities'],
+        'papers': {
+            'Class-XI':  {'name': 'Sociology 1st Paper', 'code': '116', 'hasPrac': False, 'cqMax': 70, 'mcqMax': 30},
+            'Class-XII': {'name': 'Sociology 2nd Paper', 'code': '116', 'hasPrac': False, 'cqMax': 70, 'mcqMax': 30},
+        }
+    },
+    'Social Work': {
+        'name': 'Social Work',
+        'groups': ['Humanities'],
+        'papers': {
+            'Class-XI':  {'name': 'Social Work 1st Paper', 'code': '271', 'hasPrac': False, 'cqMax': 70, 'mcqMax': 30},
+            'Class-XII': {'name': 'Social Work 2nd Paper', 'code': '272', 'hasPrac': False, 'cqMax': 70, 'mcqMax': 30},
+        }
+    },
+    'Islamic History & Culture': {
+        'name': 'Islamic History & Culture',
+        'groups': ['Humanities'],
+        'papers': {
+            'Class-XI':  {'name': 'Islamic History & Culture 1st Paper', 'code': '267', 'hasPrac': False, 'cqMax': 70, 'mcqMax': 30},
+            'Class-XII': {'name': 'Islamic History & Culture 2nd Paper', 'code': '267', 'hasPrac': False, 'cqMax': 70, 'mcqMax': 30},
+        }
+    },
+    'Islamic History': {
+        'name': 'Islamic History & Culture',
+        'groups': ['Humanities'],
+        'papers': {
+            'Class-XI':  {'name': 'Islamic History & Culture 1st Paper', 'code': '267', 'hasPrac': False, 'cqMax': 70, 'mcqMax': 30},
+            'Class-XII': {'name': 'Islamic History & Culture 2nd Paper', 'code': '267', 'hasPrac': False, 'cqMax': 70, 'mcqMax': 30},
+        }
+    },
+    'Logic': {
+        'name': 'Logic',
+        'groups': ['Humanities'],
+        'papers': {
+            'Class-XI':  {'name': 'Logic 1st Paper', 'code': '121', 'hasPrac': False, 'cqMax': 70, 'mcqMax': 30},
+            'Class-XII': {'name': 'Logic 2nd Paper', 'code': '122', 'hasPrac': False, 'cqMax': 70, 'mcqMax': 30},
+        }
+    },
+    'Home Science': {
+        'name': 'Home Science',
+        'groups': ['Humanities', 'Business'],
+        'papers': {
+            'Class-XI':  {'name': 'Home Science 1st Paper', 'code': '273', 'hasPrac': True, 'cqMax': 50, 'mcqMax': 25},
+            'Class-XII': {'name': 'Home Science 2nd Paper', 'code': '274', 'hasPrac': True, 'cqMax': 50, 'mcqMax': 25},
+        }
+    },
+    'Accounting': {
+        'name': 'Accounting',
+        'groups': ['Business'],
+        'papers': {
+            'Class-XI':  {'name': 'Accounting 1st Paper', 'code': '253', 'hasPrac': False, 'cqMax': 70, 'mcqMax': 30},
+            'Class-XII': {'name': 'Accounting 2nd Paper', 'code': '254', 'hasPrac': False, 'cqMax': 70, 'mcqMax': 30},
+        }
+    },
+    'Business Organization & Management': {
+        'name': 'Business Organization & Management',
+        'groups': ['Business'],
+        'papers': {
+            'Class-XI':  {'name': 'Business Org. & Mgmt 1st', 'code': '277', 'hasPrac': False, 'cqMax': 70, 'mcqMax': 30},
+            'Class-XII': {'name': 'Business Org. & Mgmt 2nd', 'code': '278', 'hasPrac': False, 'cqMax': 70, 'mcqMax': 30},
+        }
+    },
+    'Business Organization': {
+        'name': 'Business Organization & Management',
+        'groups': ['Business'],
+        'papers': {
+            'Class-XI':  {'name': 'Business Org. & Mgmt 1st', 'code': '277', 'hasPrac': False, 'cqMax': 70, 'mcqMax': 30},
+            'Class-XII': {'name': 'Business Org. & Mgmt 2nd', 'code': '278', 'hasPrac': False, 'cqMax': 70, 'mcqMax': 30},
+        }
+    },
+    'Finance, Banking & Insurance': {
+        'name': 'Finance, Banking & Insurance',
+        'groups': ['Business'],
+        'papers': {
+            'Class-XI':  {'name': 'Finance, Banking & Insurance 1st', 'code': '292', 'hasPrac': False, 'cqMax': 70, 'mcqMax': 30},
+            'Class-XII': {'name': 'Finance, Banking & Insurance 2nd', 'code': '293', 'hasPrac': False, 'cqMax': 70, 'mcqMax': 30},
+        }
+    },
+    'Finance': {
+        'name': 'Finance, Banking & Insurance',
+        'groups': ['Business'],
+        'papers': {
+            'Class-XI':  {'name': 'Finance, Banking & Insurance 1st', 'code': '292', 'hasPrac': False, 'cqMax': 70, 'mcqMax': 30},
+            'Class-XII': {'name': 'Finance, Banking & Insurance 2nd', 'code': '293', 'hasPrac': False, 'cqMax': 70, 'mcqMax': 30},
+        }
+    }
+}
+
+def _resolve_teacher_subject_info(subject_name, cls_val=None, group_val=None):
+    """Resolve paper metadata and authorized codes for a subject."""
+    sub_key = (subject_name or '').strip()
+    match_entry = None
+    for k, v in TEACHER_CANONICAL_SUBJECTS.items():
+        if k.lower() == sub_key.lower():
+            match_entry = v
+            break
+    if not match_entry:
+        for k, v in TEACHER_CANONICAL_SUBJECTS.items():
+            if k.lower() in sub_key.lower() or sub_key.lower() in k.lower():
+                match_entry = v
+                break
+
+    auth_codes = set()
+    if match_entry:
+        for p in match_entry.get('papers', {}).values():
+            if p.get('code'):
+                auth_codes.add(str(p['code']))
+        groups = match_entry.get('groups', ['Science', 'Humanities', 'Business'])
+        paper = match_entry.get('papers', {}).get(cls_val) if cls_val else None
+        return {
+            'canonicalName': match_entry['name'],
+            'groups': groups,
+            'paper': paper,
+            'authorizedCodes': list(auth_codes)
+        }
+
+    # Fallback to direct lookup across SUBJECT_LIST
+    for grp, s_list in SUBJECT_LIST.items():
+        for s in s_list:
+            if s['name'].lower() == sub_key.lower() or s['code'] == sub_key or sub_key.lower() in s['name'].lower():
+                auth_codes.add(str(s['code']))
+    
+    return {
+        'canonicalName': sub_key,
+        'groups': ['Science', 'Humanities', 'Business'],
+        'paper': {'name': sub_key, 'code': sub_key, 'hasPrac': False, 'cqMax': 70, 'mcqMax': 30},
+        'authorizedCodes': list(auth_codes) or [sub_key]
+    }
+
+
+@app.route('/api/teacher/login', methods=['POST'])
+@limiter.limit("20 per minute")
+def teacher_login():
+    """Subject Teacher Login endpoint."""
+    body = request.get_json(force=True, silent=True) or {}
+    subject = (body.get('subject') or body.get('subjectName') or '').strip()
+    pw = (body.get('password') or body.get('pw') or '').strip()
+
+    if not subject or not pw:
+        return jsonify({'ok': False, 'message': 'Please enter both Subject and Password.'}), 400
+
+    teacher = SubjectTeacher.query.filter(
+        db.func.lower(SubjectTeacher.subject_name) == subject.lower(),
+        SubjectTeacher.password == pw
+    ).first()
+
+    if not teacher:
+        return jsonify({'ok': False, 'message': 'Invalid Subject or Password. Please try again.'}), 401
+
+    session['authenticated'] = True
+    session['role'] = 'teacher'
+    session['teacher_id'] = teacher.id
+    session['teacher_name'] = teacher.teacher_name
+    session['teacher_subject'] = teacher.subject_name
+    session.permanent = False
+
+    return jsonify({
+        'ok': True,
+        'role': 'teacher',
+        'teacherName': teacher.teacher_name,
+        'subjectName': teacher.subject_name,
+        'redirect': '/teacher-panel.html',
+        'message': 'Login successful'
+    })
+
+
+@app.route('/api/teacher/session-info', methods=['GET'])
+def teacher_session_info():
+    """Return currently logged-in teacher info."""
+    if not session.get('authenticated'):
+        return jsonify({'ok': False, 'authenticated': False}), 401
+    return jsonify({
+        'ok': True,
+        'authenticated': True,
+        'role': session.get('role'),
+        'teacherName': session.get('teacher_name') or 'Administrator',
+        'subjectName': session.get('teacher_subject') or ''
+    })
+
+
+@app.route('/api/teacher/subjects-list', methods=['GET'])
+def teacher_subjects_list():
+    """Return list of distinct subjects for teacher login dropdown."""
+    teachers = SubjectTeacher.query.order_by(SubjectTeacher.subject_name.asc()).all()
+    subjects = []
+    seen = set()
+    for t in teachers:
+        name = (t.subject_name or '').strip()
+        if name and name.lower() not in seen:
+            seen.add(name.lower())
+            subjects.append(name)
+    return jsonify({'ok': True, 'subjects': subjects})
+
+
+@app.route('/api/admin/subject-teachers', methods=['GET', 'POST'])
+@require_admin
+def admin_subject_teachers():
+    """Admin CRUD: list and create subject teachers."""
+    if request.method == 'GET':
+        teachers = SubjectTeacher.query.order_by(SubjectTeacher.subject_name.asc()).all()
+        return jsonify({'ok': True, 'data': [t.to_dict() for t in teachers]})
+
+    # POST - Add new subject teacher
+    data = request.get_json(force=True, silent=True) or {}
+    name = (data.get('teacherName') or data.get('teacher_name') or '').strip()
+    subject = (data.get('subjectName') or data.get('subject_name') or '').strip()
+    password = (data.get('password') or '').strip()
+    phone = (data.get('phone') or '').strip()
+    email = (data.get('email') or '').strip()
+
+    if not name or not subject or not password:
+        return jsonify({'ok': False, 'message': 'Teacher Name, Subject, and Password are required.'}), 400
+
+    new_id = f"ST_{int(time.time() * 1000)}"
+    st = SubjectTeacher(
+        id=new_id,
+        teacher_name=name,
+        subject_name=subject,
+        password=password,
+        phone=phone,
+        email=email
+    )
+    db.session.add(st)
+    db.session.commit()
+    return jsonify({'ok': True, 'data': st.to_dict(), 'message': 'Subject teacher created successfully.'})
+
+
+@app.route('/api/admin/subject-teachers/<string:tid>', methods=['PUT', 'DELETE'])
+@require_admin
+def admin_subject_teacher_detail(tid):
+    """Admin CRUD: update or delete a subject teacher."""
+    st = SubjectTeacher.query.filter_by(id=tid).first()
+    if not st:
+        return jsonify({'ok': False, 'message': 'Subject teacher not found.'}), 404
+
+    if request.method == 'DELETE':
+        db.session.delete(st)
+        db.session.commit()
+        return jsonify({'ok': True, 'message': 'Subject teacher deleted successfully.'})
+
+    # PUT
+    data = request.get_json(force=True, silent=True) or {}
+    name = (data.get('teacherName') or data.get('teacher_name') or '').strip()
+    subject = (data.get('subjectName') or data.get('subject_name') or '').strip()
+    password = (data.get('password') or '').strip()
+    phone = (data.get('phone') or '').strip()
+    email = (data.get('email') or '').strip()
+
+    if name:
+        st.teacher_name = name
+    if subject:
+        st.subject_name = subject
+    if password:
+        st.password = password
+    if 'phone' in data:
+        st.phone = phone
+    if 'email' in data:
+        st.email = email
+
+    db.session.commit()
+    return jsonify({'ok': True, 'data': st.to_dict(), 'message': 'Subject teacher updated successfully.'})
+
+
+@app.route('/api/teacher/meta', methods=['GET'])
+@require_auth
+def get_teacher_meta():
+    """Return subject meta, allowed groups, papers, and sessions for the teacher panel."""
+    # Determine subject: if teacher role, use session; if admin role, allow subject query param
+    subject_name = session.get('teacher_subject') or request.args.get('subject') or ''
+    cls_val = (request.args.get('cls') or 'Class-XI').strip()
+    group_val = (request.args.get('group') or 'Science').strip()
+
+    info = _resolve_teacher_subject_info(subject_name, cls_val, group_val)
+
+    # Distinct sessions from students
+    sessions = [row[0] for row in db.session.query(Student.session).distinct().all() if row[0]]
+    if not sessions:
+        sessions = [row[0] for row in db.session.query(Student.year).distinct().all() if row[0]]
+    sessions = sorted(list(set(s.replace('–', '-').replace('\u2013', '-') for s in sessions if s)), reverse=True)
+
+    return jsonify({
+        'ok': True,
+        'teacherName': session.get('teacher_name') or 'Teacher',
+        'subjectName': subject_name,
+        'canonicalName': info['canonicalName'],
+        'groups': info['groups'],
+        'paper': info['paper'],
+        'authorizedCodes': info['authorizedCodes'],
+        'sessions': sessions or ['2024-2025', '2025-2026']
+    })
+
+
+@app.route('/api/teacher/students-and-marks', methods=['GET'])
+@require_auth
+def get_teacher_students_and_marks():
+    """Fetch students and their existing marks for the teacher's subject."""
+    cls_val      = (request.args.get('cls') or '').strip()
+    group_val    = (request.args.get('group') or '').strip()
+    session_val  = (request.args.get('session') or '').strip().replace('–', '-').replace('\u2013', '-')
+    exam_type    = (request.args.get('exam_type') or '').strip()
+    subject_code = (request.args.get('subject_code') or '').strip()
+
+    if not all([cls_val, group_val, session_val, exam_type, subject_code]):
+        return jsonify({'ok': False, 'message': 'cls, group, session, exam_type, and subject_code are all required.'}), 400
+
+    # Authorization check for teacher role
+    if session.get('role') == 'teacher':
+        teacher_subject = session.get('teacher_subject') or ''
+        info = _resolve_teacher_subject_info(teacher_subject)
+        if subject_code not in info['authorizedCodes']:
+            return jsonify({'ok': False, 'message': 'Forbidden: You are not authorized for this subject code.'}), 403
+
+    # Query students
+    students = Student.query.filter_by(cls=cls_val, group=group_val).filter(
+        (Student.session == session_val) | (Student.year == session_val)
+    ).all()
+
+    # Filter humanities students who are assigned this subject
+    filtered_students = []
+    unassigned_count = 0
+    for s in students:
+        if group_val == 'Humanities':
+            status = _is_humanities_subject_applicable(s, subject_code)
+            if status is True:
+                filtered_students.append(s)
+            elif status is None:
+                unassigned_count += 1
+                filtered_students.append(s) # Show but flagged
+        else:
+            filtered_students.append(s)
+
+    # Sort students by roll
+    def _roll_key(st):
+        try:
+            return int(st.roll)
+        except (ValueError, TypeError):
+            return 999999
+    filtered_students.sort(key=_roll_key)
+
+    student_ids = [s.id for s in filtered_students]
+    existing_marks = {}
+    if student_ids:
+        marks_rows = Mark.query.filter(
+            Mark.student_id.in_(student_ids),
+            Mark.exam_type == exam_type,
+            Mark.subject_code == subject_code
+        ).all()
+        for m in marks_rows:
+            existing_marks[m.student_id] = {
+                'cq': m.cq,
+                'mcq': m.mcq,
+                'prac': m.prac,
+                'absent': bool(m.absent),
+                'selectedOptional': m.selected_optional or ''
+            }
+
+    data = []
+    for s in filtered_students:
+        m = existing_marks.get(s.id, {})
+        data.append({
+            'id': s.id,
+            'roll': s.roll,
+            'name': s.name,
+            'optionalSubjects': s.optional_subjects or '',
+            'humanitiesMainSubjects': getattr(s, 'humanities_main_subjects', '') or '',
+            'existingMark': m
+        })
+
+    return jsonify({
+        'ok': True,
+        'students': data,
+        'totalStudents': len(data),
+        'unassignedCount': unassigned_count
+    })
+
+
+@app.route('/api/teacher/save-marks', methods=['POST'])
+@require_auth
+def save_teacher_marks():
+    """Save batch marks submitted by subject teacher."""
+    body = request.get_json(force=True, silent=True) or {}
+    subject_code = body.get('subjectCode')
+    exam_type = body.get('examType')
+    year = body.get('year')
+    entries = body.get('entries', [])
+
+    if not subject_code or not exam_type or not year:
+        return jsonify({'ok': False, 'message': 'subjectCode, examType, and year are required.'}), 400
+
+    # Authorization check for teacher role
+    if session.get('role') == 'teacher':
+        teacher_subject = session.get('teacher_subject') or ''
+        info = _resolve_teacher_subject_info(teacher_subject)
+        if str(subject_code) not in info['authorizedCodes']:
+            return jsonify({'ok': False, 'message': 'Forbidden: You are only authorized to save marks for your assigned subject.'}), 403
+
+    try:
+        saved_count = 0
+        cleared_count = 0
+        for entry in entries:
+            sid = entry.get('studentId')
+            if not sid:
+                continue
+
+            cq_raw = entry.get('cq')
+            mcq_raw = entry.get('mcq')
+            prac_raw = entry.get('prac')
+            is_absent = bool(entry.get('absent', False))
+
+            is_empty = (not is_absent) and \
+                       (cq_raw == '' or cq_raw is None) and \
+                       (mcq_raw == '' or mcq_raw is None) and \
+                       (prac_raw == '' or prac_raw is None)
+
+            # Remove previous mark row
+            Mark.query.filter_by(student_id=sid, exam_type=exam_type, subject_code=str(subject_code)).delete()
+
+            if not is_empty:
+                try:
+                    cq   = 0 if is_absent else int(float(cq_raw or 0))
+                    mcq  = 0 if is_absent else int(float(mcq_raw or 0))
+                    prac = 0 if is_absent else int(float(prac_raw or 0))
+                except (ValueError, TypeError):
+                    return jsonify({'ok': False, 'message': f'Invalid mark format for student {sid}. Marks must be numeric.'}), 400
+
+                selected_optional = entry.get('selectedOptional')
+                if selected_optional is None:
+                    existing = Mark.query.filter_by(student_id=sid, exam_type=exam_type).first()
+                    selected_optional = existing.selected_optional if existing else ''
+
+                mark = Mark(
+                    student_id=sid,
+                    exam_type=exam_type,
+                    year=str(year).strip().replace('–', '-').replace('\u2013', '-'),
+                    subject_code=str(subject_code),
+                    cq=cq,
+                    mcq=mcq,
+                    prac=prac,
+                    absent=is_absent,
+                    selected_optional=selected_optional or ''
+                )
+                db.session.add(mark)
+                saved_count += 1
+            else:
+                cleared_count += 1
+
+        db.session.commit()
+        return jsonify({
+            'ok': True,
+            'savedCount': saved_count,
+            'clearedCount': cleared_count,
+            'message': f'Marks successfully saved for {saved_count} student(s).'
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'ok': False, 'message': f'Database error: {str(e)}'}), 500
+
 
 
 # ─────────────────────────────────────────────

@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teacher Panel - Subject Marks Entry - Moinuddin Adarsha Mohila College</title>
+  <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700;900&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --navy: #0d2b45;
+      --navy2: #174070;
+      --navy3: #1f5490;
+      --gold: #a97c28;
+      --gold2: #c9973a;
+      --gold3: #e8b84b;
+      --slate: #f1f4f8;
+      --slate2: #e8ecf2;
+      --white: #fff;
+      --txt: #0f172a;
+      --txt2: #334155;
+      --muted: #64748b;
+      --border: #dde3ed;
+      --border2: #c8d2e0;
+      --red: #b91c1c;
+      --green: #166534;
+      --amber: #92400e;
+      --r: 6px;
+      --r-md: 10px;
+      --r-lg: 14px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Source Sans 3', sans-serif;
+      background: var(--slate);
+      color: var(--txt);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top Navigation Header */
+    .top-nav-bar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 72px;
+      z-index: 201;
+      background: linear-gradient(180deg, #0d2b45 0%, #0a2138 100%);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 26px;
+      border-bottom: 1px solid rgba(255,255,255,.1);
+      box-shadow: 0 4px 16px rgba(0,0,0,.2);
+    }
+
+    .top-nav-logo-text h1 {
+      font-family: 'Merriweather', serif;
+      font-size: .95rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .top-nav-logo-text p {
+      font-size: .68rem;
+      color: rgba(255,255,255,.6);
+      margin-top: 2px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    .top-nav-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .teacher-info-pill {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 6px 14px;
+      border-radius: 999px;
+    }
+
+    .teacher-name-tag {
+      font-size: .82rem;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .teacher-subject-badge {
+      background: var(--gold2);
+      color: #ffffff;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .02em;
+    }
+
+    .logout-btn {
+      padding: 8px 16px;
+      border-radius: var(--r);
+      border: 1px solid rgba(255,255,255,.3);
+      background: transparent;
+      color: #fff;
+      font-size: .78rem;
+      font-family: inherit;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all .15s;
+    }
+
+    .logout-btn:hover {
+      background: rgba(255,255,255,.1);
+      border-color: rgba(255,255,255,.6);
+    }
+
+    /* Main Container */
+    .main-wrap {
+      margin-top: 72px;
+      padding: 24px 26px;
+      flex: 1;
+      max-width: 1400px;
+      width: 100%;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--white);
+      border-radius: var(--r-lg);
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 4px rgba(13,43,69,.08);
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+
+    .card-head {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #fafcff;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .card-head h3 {
+      font-family: 'Merriweather', serif;
+      font-size: .96rem;
+      font-weight: 700;
+      color: var(--navy);
+    }
+
+    .card-head .meta {
+      font-size: .76rem;
+      color: var(--muted);
+    }
+
+    .card-body {
+      padding: 20px;
+    }
+
+    .card-body.np {
+      padding: 0;
+    }
+
+    /* Filter Grid */
+    .filter-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      align-items: flex-end;
+    }
+
+    .fg {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .fg label {
+      font-size: .78rem;
+      font-weight: 700;
+      color: var(--navy);
+    }
+
+    .fg select, .fg input {
+      padding: 9px 12px;
+      border: 1.5px solid var(--border2);
+      border-radius: var(--r);
+      font-size: .86rem;
+      font-family: inherit;
+      background: #fafcff;
+      color: var(--txt);
+      transition: all .15s;
+    }
+
+    .fg select:focus, .fg input:focus {
+      outline: none;
+      border-color: var(--navy3);
+      box-shadow: 0 0 0 3px rgba(31,84,144,.1);
+    }
+
+    .subject-info-banner {
+      margin-top: 16px;
+      padding: 12px 16px;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: var(--r);
+      font-size: .83rem;
+      color: #1e40af;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .banner-title {
+      font-weight: 700;
+    }
+
+    .banner-specs {
+      font-weight: 600;
+      color: #1e3a8a;
+    }
+
+    /* Buttons */
+    .btn {
+      padding: 9px 20px;
+      border-radius: var(--r);
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: .84rem;
+      font-weight: 700;
+      transition: all .14s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: var(--navy);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: var(--navy2);
+    }
+
+    .btn-gold {
+      background: var(--gold);
+      color: #fff;
+    }
+
+    .btn-gold:hover {
+      background: var(--gold2);
+    }
+
+    .btn-save {
+      background: linear-gradient(135deg, #166534 0%, #15803d 100%);
+      color: #fff;
+      font-size: .92rem;
+      padding: 12px 28px;
+      box-shadow: 0 4px 12px rgba(22, 101, 52, 0.25);
+    }
+
+    .btn-save:hover {
+      background: linear-gradient(135deg, #14532d 0%, #166534 100%);
+    }
+
+    .btn-save:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+
+    /* Alerts */
+    .alert {
+      padding: 12px 16px;
+      border-radius: var(--r);
+      font-size: .84rem;
+      margin-bottom: 16px;
+      border: 1px solid;
+    }
+
+    .alert-ok {
+      background: #f0fdf4;
+      color: #15803d;
+      border-color: #bbf7d0;
+    }
+
+    .alert-err {
+      background: #fef2f2;
+      color: #991b1b;
+      border-color: #fecaca;
+    }
+
+    .alert-info {
+      background: #f8fafc;
+      color: #334155;
+      border-color: #cbd5e1;
+    }
+
+    /* Batch Marks Table */
+    .tbl-wrap {
+      overflow-x: auto;
+      max-height: calc(100vh - 360px);
+    }
+
+    .batch-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .84rem;
+    }
+
+    .batch-table thead th {
+      background: var(--navy);
+      color: #fff;
+      padding: 10px 12px;
+      font-weight: 700;
+      font-size: .76rem;
+      text-align: left;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      white-space: nowrap;
+    }
+
+    .batch-table tbody tr {
+      border-bottom: 1px solid var(--border);
+    }
+
+    .batch-table tbody tr:hover {
+      background: #f8fafc;
+    }
+
+    .batch-table td {
+      padding: 8px 12px;
+      vertical-align: middle;
+      color: var(--txt2);
+    }
+
+    .batch-inp {
+      width: 76px;
+      padding: 6px 8px;
+      border: 1.5px solid var(--border2);
+      border-radius: 4px;
+      font-size: .88rem;
+      font-weight: 700;
+      text-align: center;
+      background: #fff;
+      color: var(--txt);
+      font-family: inherit;
+    }
+
+    .batch-inp:focus {
+      outline: none;
+      border-color: var(--navy3);
+      box-shadow: 0 0 0 2px rgba(31,84,144,.15);
+      background: #eff6ff;
+    }
+
+    .batch-inp.absent-locked {
+      background: #f1f5f9;
+      color: #94a3b8;
+      border-color: #e2e8f0;
+      cursor: not-allowed;
+    }
+
+    .batch-tot-inp {
+      width: 70px;
+      padding: 6px 8px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: .88rem;
+      font-weight: 800;
+      text-align: center;
+      background: #f8fafc;
+      color: var(--navy);
+      font-family: inherit;
+    }
+
+    .grade-chip {
+      display: inline-block;
+      width: 44px;
+      padding: 4px 0;
+      border-radius: 4px;
+      font-size: .76rem;
+      font-weight: 800;
+      text-align: center;
+      color: #fff;
+    }
+
+    .g-Ap { background: #15803d; }
+    .g-A  { background: #16a34a; }
+    .g-Am { background: #0d9488; }
+    .g-B  { background: #2563eb; }
+    .g-C  { background: #d97706; }
+    .g-D  { background: #ca8a04; }
+    .g-F  { background: #dc2626; }
+    .g-Ab { background: #64748b; }
+    .g-none { background: #e2e8f0; color: #64748b; }
+
+    /* Action footer */
+    .batch-action-bar {
+      padding: 16px 20px;
+      background: #fafcff;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+
+    .progress-wrap {
+      flex: 1;
+      max-width: 320px;
+      display: none;
+    }
+
+    .progress-bar-bg {
+      width: 100%;
+      height: 8px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      width: 0%;
+      height: 100%;
+      background: #166534;
+      transition: width .2s ease;
+    }
+
+    .progress-text {
+      font-size: .72rem;
+      color: var(--muted);
+      margin-top: 4px;
+      font-weight: 600;
+    }
+
+    .empty-state-card {
+      padding: 48px 20px;
+      text-align: center;
+      color: var(--muted);
+      font-size: .88rem;
+    }
+
+    @media (max-width: 768px) {
+      .top-nav-bar {
+        padding: 0 16px;
+        height: auto;
+        min-height: 72px;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 8px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+      }
+      .top-nav-right {
+        width: 100%;
+        justify-content: space-between;
+      }
+      .main-wrap {
+        margin-top: 120px;
+        padding: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header Bar -->
+  <header class="top-nav-bar">
+    <div class="top-nav-logo-text">
+      <h1>Moinuddin Adarsha Mohila College, Sylhet</h1>
+      <p>Subject Teacher Marks Entry Portal</p>
+    </div>
+    <div class="top-nav-right">
+      <div class="teacher-info-pill">
+        <span class="teacher-name-tag" id="hdr-teacher-name">Loading...</span>
+        <span class="teacher-subject-badge" id="hdr-subject-name">Subject</span>
+      </div>
+      <button class="logout-btn" onclick="doLogout()">Logout</button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-wrap">
+    <div id="status-alert"></div>
+
+    <!-- Filter Card -->
+    <div class="card">
+      <div class="card-head">
+        <h3>Select Class, Group and Exam Session</h3>
+        <span class="meta">Filter students for your assigned subject</span>
+      </div>
+      <div class="card-body">
+        <div class="filter-grid">
+          <div class="fg">
+            <label for="f-cls">Class</label>
+            <select id="f-cls" onchange="onClassOrGroupChange()">
+              <option value="Class-XI">Class-XI</option>
+              <option value="Class-XII">Class-XII</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label for="f-group">Academic Group</label>
+            <select id="f-group" onchange="onClassOrGroupChange()">
+              <option value="Science">Science</option>
+              <option value="Humanities">Humanities</option>
+              <option value="Business">Business</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label for="f-session">Session</label>
+            <select id="f-session">
+              <option value="">Loading Sessions...</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label for="f-exam">Exam Type</label>
+            <select id="f-exam">
+              <option value="First Terminal">First Terminal</option>
+              <option value="Half Yearly">Half Yearly</option>
+              <option value="Annual">Annual</option>
+              <option value="Pre-Test">Pre-Test</option>
+              <option value="Test">Test</option>
+            </select>
+          </div>
+          <div class="fg">
+            <button type="button" class="btn btn-primary" onclick="loadStudentsForBatch()">Load Students</button>
+          </div>
+        </div>
+
+        <div class="subject-info-banner" id="subject-info-banner" style="display: none;">
+          <span class="banner-title" id="banner-paper-name">Subject Paper</span>
+          <span class="banner-specs" id="banner-specs">CQ: 70 | MCQ: 30</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Batch Marks Entry Card -->
+    <div class="card" id="batch-sheet-card" style="display: none;">
+      <div class="card-head">
+        <div>
+          <h3 id="sheet-title">Marks Sheet</h3>
+          <span class="meta" id="sheet-meta">Select filters to load</span>
+        </div>
+        <span class="meta" id="sheet-count">0 Students</span>
+      </div>
+      <div class="card-body np">
+        <div class="tbl-wrap">
+          <table class="batch-table" id="batch-tbl">
+            <thead>
+              <tr id="batch-tbl-header">
+                <!-- Dynamically injected -->
+              </tr>
+            </thead>
+            <tbody id="batch-tbl-body">
+              <!-- Dynamically injected -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="batch-action-bar">
+        <div class="progress-wrap" id="prog-wrap">
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="prog-fill"></div>
+          </div>
+          <div class="progress-text" id="prog-text">Saving marks...</div>
+        </div>
+        <button type="button" class="btn btn-save" id="btn-save-batch" onclick="saveAllBatchMarks()">Save All Marks</button>
+      </div>
+    </div>
+
+    <!-- Empty State Placeholder -->
+    <div class="card" id="empty-state-card">
+      <div class="empty-state-card">
+        <p>Please select your Class, Group, Session, and Exam Type above, then click <strong>Load Students</strong> to begin marks entry.</p>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    (function () {
+      const defaultBase = window.location.origin;
+      window.API_BASE = window.API_BASE !== undefined ? window.API_BASE : defaultBase;
+      const _origFetch = window.fetch;
+      window.fetch = function () {
+        let args = Array.prototype.slice.call(arguments);
+        let resource = args[0];
+        let config = args[1] || {};
+        if (typeof resource === 'string' && resource.startsWith('/api')) {
+          resource = window.API_BASE + resource;
+        }
+        config.credentials = 'include';
+        args[0] = resource;
+        args[1] = config;
+        return _origFetch.apply(window, args);
+      };
+    })();
+
+    let currentTeacherSubject = '';
+    let currentTeacherName = '';
+    let currentPaperMeta = null;
+    let loadedStudents = [];
+
+    function showAlert(type, msg) {
+      const box = document.getElementById('status-alert');
+      if (!msg) {
+        box.innerHTML = '';
+        return;
+      }
+      const cls = type === 'ok' ? 'alert-ok' : type === 'err' ? 'alert-err' : 'alert-info';
+      box.innerHTML = `<div class="alert ${cls}">${msg}</div>`;
+      if (type === 'ok') {
+        setTimeout(() => { box.innerHTML = ''; }, 5000);
+      }
+    }
+
+    async function initSession() {
+      try {
+        const res = await fetch('/api/teacher/session-info');
+        const data = await res.json();
+        if (!data.authenticated) {
+          window.location.href = '/teacher-login.html';
+          return;
+        }
+
+        currentTeacherName = data.teacherName || 'Teacher';
+        currentTeacherSubject = data.subjectName || '';
+
+        document.getElementById('hdr-teacher-name').textContent = currentTeacherName;
+        document.getElementById('hdr-subject-name').textContent = currentTeacherSubject || 'All Subjects';
+
+        await fetchMeta();
+      } catch (err) {
+        window.location.href = '/teacher-login.html';
+      }
+    }
+
+    async function fetchMeta() {
+      const cls = document.getElementById('f-cls').value;
+      const grp = document.getElementById('f-group').value;
+
+      try {
+        const res = await fetch(`/api/teacher/meta?cls=${encodeURIComponent(cls)}&group=${encodeURIComponent(grp)}`);
+        const data = await res.json();
+        if (data.ok) {
+          // Populate groups if restricted
+          const grpSelect = document.getElementById('f-group');
+          if (data.groups && data.groups.length > 0) {
+            Array.from(grpSelect.options).forEach(opt => {
+              if (data.groups.includes(opt.value)) {
+                opt.disabled = false;
+              } else {
+                opt.disabled = true;
+              }
+            });
+            if (!data.groups.includes(grpSelect.value)) {
+              grpSelect.value = data.groups[0];
+            }
+          }
+
+          // Populate sessions
+          const sessSelect = document.getElementById('f-session');
+          sessSelect.innerHTML = '';
+          (data.sessions || ['2024-2025', '2025-2026']).forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s;
+            opt.textContent = s;
+            sessSelect.appendChild(opt);
+          });
+
+          // Display paper specs
+          updatePaperBanner(data.paper);
+        }
+      } catch (e) {
+        console.error('Error fetching meta:', e);
+      }
+    }
+
+    function updatePaperBanner(paper) {
+      currentPaperMeta = paper;
+      const banner = document.getElementById('subject-info-banner');
+      if (!paper) {
+        banner.style.display = 'none';
+        return;
+      }
+      banner.style.display = 'flex';
+      document.getElementById('banner-paper-name').textContent = `${paper.name} (Code: ${paper.code})`;
+      
+      let specs = `Creative Question (CQ) Max: ${paper.cqMax}`;
+      if (paper.mcqMax > 0) {
+        specs += ` | MCQ Max: ${paper.mcqMax}`;
+      }
+      if (paper.hasPrac) {
+        specs += ` | Practical Max: 25`;
+      }
+      document.getElementById('banner-specs').textContent = specs;
+    }
+
+    async function onClassOrGroupChange() {
+      const cls = document.getElementById('f-cls').value;
+      const grp = document.getElementById('f-group').value;
+      try {
+        const res = await fetch(`/api/teacher/meta?cls=${encodeURIComponent(cls)}&group=${encodeURIComponent(grp)}`);
+        const data = await res.json();
+        if (data.ok) {
+          updatePaperBanner(data.paper);
+        }
+      } catch (e) {}
+    }
+
+    async function loadStudentsForBatch() {
+      showAlert('ok', '');
+      const cls = document.getElementById('f-cls').value;
+      const grp = document.getElementById('f-group').value;
+      const session = document.getElementById('f-session').value;
+      const exam = document.getElementById('f-exam').value;
+
+      if (!currentPaperMeta || !currentPaperMeta.code) {
+        showAlert('err', 'Could not resolve subject paper for the selected class and group.');
+        return;
+      }
+
+      const subjectCode = currentPaperMeta.code;
+      const btn = event?.target;
+      if (btn) { btn.disabled = true; btn.textContent = 'Loading...'; }
+
+      try {
+        const url = `/api/teacher/students-and-marks?cls=${encodeURIComponent(cls)}&group=${encodeURIComponent(grp)}&session=${encodeURIComponent(session)}&exam_type=${encodeURIComponent(exam)}&subject_code=${encodeURIComponent(subjectCode)}`;
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (!data.ok) {
+          showAlert('err', data.message || 'Failed to load students.');
+          return;
+        }
+
+        loadedStudents = data.students || [];
+
+        document.getElementById('empty-state-card').style.display = 'none';
+        document.getElementById('batch-sheet-card').style.display = 'block';
+
+        document.getElementById('sheet-title').textContent = `${currentPaperMeta.name} — Marks Sheet`;
+        document.getElementById('sheet-meta').textContent = `${cls} | ${grp} | Session: ${session} | Exam: ${exam}`;
+        document.getElementById('sheet-count').textContent = `${loadedStudents.length} Student${loadedStudents.length === 1 ? '' : 's'}`;
+
+        if (data.unassignedCount > 0) {
+          showAlert('info', `Notice: ${data.unassignedCount} Humanities student(s) do not have this subject assigned yet.`);
+        }
+
+        renderBatchTable();
+      } catch (err) {
+        showAlert('err', 'Network error while loading students.');
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Load Students'; }
+      }
+    }
+
+    function renderBatchTable() {
+      const thead = document.getElementById('batch-tbl-header');
+      const tbody = document.getElementById('batch-tbl-body');
+      const p = currentPaperMeta;
+
+      let thHtml = `
+        <th style="width: 70px;">Roll</th>
+        <th style="min-width: 180px;">Student Name</th>
+        <th style="width: 70px; text-align: center;">Absent</th>
+        <th style="width: 90px; text-align: center;">CQ (Max ${p.cqMax})</th>
+      `;
+
+      if (p.mcqMax > 0) {
+        thHtml += `<th style="width: 90px; text-align: center;">MCQ (Max ${p.mcqMax})</th>`;
+      }
+      if (p.hasPrac) {
+        thHtml += `<th style="width: 90px; text-align: center;">Practical (Max 25)</th>`;
+      }
+
+      thHtml += `
+        <th style="width: 80px; text-align: center;">Total</th>
+        <th style="width: 70px; text-align: center;">Grade</th>
+      `;
+      thead.innerHTML = thHtml;
+
+      if (loadedStudents.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:30px; color:#64748b;">No students found matching the selected class, group, and session.</td></tr>';
+        return;
+      }
+
+      let rowsHtml = '';
+      loadedStudents.forEach((s, idx) => {
+        const m = s.existingMark || {};
+        const isAbsent = !!m.absent;
+        const cqVal = isAbsent ? '' : (m.cq !== undefined && m.cq !== '' ? m.cq : '');
+        const mcqVal = isAbsent ? '' : (m.mcq !== undefined && m.mcq !== '' ? m.mcq : '');
+        const pracVal = isAbsent ? '' : (m.prac !== undefined && m.prac !== '' ? m.prac : '');
+
+        rowsHtml += `
+          <tr data-sid="${s.id}">
+            <td><strong>${escapeHtml(s.roll)}</strong></td>
+            <td>${escapeHtml(s.name)}</td>
+            <td style="text-align: center;">
+              <input type="checkbox" id="absent-${s.id}" ${isAbsent ? 'checked' : ''} onchange="toggleAbsent('${s.id}')">
+            </td>
+            <td style="text-align: center;">
+              <input class="batch-inp${isAbsent ? ' absent-locked' : ''}" type="number" min="0" max="${p.cqMax}" 
+                id="cq-${s.id}" value="${cqVal}" placeholder="${p.cqMax}" ${isAbsent ? 'disabled' : ''} 
+                oninput="enforceMax(this, ${p.cqMax}); calculateRow('${s.id}')" onkeydown="handleEnterKey(event, 'cq', ${idx})">
+            </td>
+        `;
+
+        if (p.mcqMax > 0) {
+          rowsHtml += `
+            <td style="text-align: center;">
+              <input class="batch-inp${isAbsent ? ' absent-locked' : ''}" type="number" min="0" max="${p.mcqMax}" 
+                id="mcq-${s.id}" value="${mcqVal}" placeholder="${p.mcqMax}" ${isAbsent ? 'disabled' : ''} 
+                oninput="enforceMax(this, ${p.mcqMax}); calculateRow('${s.id}')" onkeydown="handleEnterKey(event, 'mcq', ${idx})">
+            </td>
+          `;
+        }
+
+        if (p.hasPrac) {
+          rowsHtml += `
+            <td style="text-align: center;">
+              <input class="batch-inp${isAbsent ? ' absent-locked' : ''}" type="number" min="0" max="25" 
+                id="prac-${s.id}" value="${pracVal}" placeholder="25" ${isAbsent ? 'disabled' : ''} 
+                oninput="enforceMax(this, 25); calculateRow('${s.id}')" onkeydown="handleEnterKey(event, 'prac', ${idx})">
+            </td>
+          `;
+        }
+
+        rowsHtml += `
+            <td style="text-align: center;">
+              <input class="batch-tot-inp" id="tot-${s.id}" type="text" readonly value="—">
+            </td>
+            <td style="text-align: center;">
+              <span class="grade-chip g-none" id="grade-${s.id}">—</span>
+            </td>
+          </tr>
+        `;
+      });
+
+      tbody.innerHTML = rowsHtml;
+      loadedStudents.forEach(s => calculateRow(s.id));
+    }
+
+    function enforceMax(input, maxVal) {
+      let num = parseInt(input.value, 10);
+      if (isNaN(num)) return;
+      if (num < 0) input.value = 0;
+      if (num > maxVal) input.value = maxVal;
+    }
+
+    function toggleAbsent(sid) {
+      const isAbsent = document.getElementById(`absent-${sid}`).checked;
+      const p = currentPaperMeta;
+
+      ['cq', 'mcq', 'prac'].forEach(field => {
+        const el = document.getElementById(`${field}-${sid}`);
+        if (el) {
+          el.disabled = isAbsent;
+          if (isAbsent) {
+            el.value = '';
+            el.classList.add('absent-locked');
+          } else {
+            el.classList.remove('absent-locked');
+          }
+        }
+      });
+
+      calculateRow(sid);
+    }
+
+    function calculateRow(sid) {
+      const isAbsent = document.getElementById(`absent-${sid}`)?.checked;
+      const totEl = document.getElementById(`tot-${sid}`);
+      const gradeEl = document.getElementById(`grade-${sid}`);
+      const p = currentPaperMeta;
+
+      if (isAbsent) {
+        totEl.value = 'Ab';
+        gradeEl.textContent = 'Ab';
+        gradeEl.className = 'grade-chip g-Ab';
+        return;
+      }
+
+      const cqEl = document.getElementById(`cq-${sid}`);
+      const mcqEl = document.getElementById(`mcq-${sid}`);
+      const pracEl = document.getElementById(`prac-${sid}`);
+
+      const cqStr = cqEl ? cqEl.value.trim() : '';
+      const mcqStr = mcqEl ? mcqEl.value.trim() : '';
+      const pracStr = pracEl ? pracEl.value.trim() : '';
+
+      if (cqStr === '' && mcqStr === '' && pracStr === '') {
+        totEl.value = '—';
+        gradeEl.textContent = '—';
+        gradeEl.className = 'grade-chip g-none';
+        return;
+      }
+
+      const cq = parseInt(cqStr, 10) || 0;
+      const mcq = parseInt(mcqStr, 10) || 0;
+      const prac = parseInt(pracStr, 10) || 0;
+      const total = cq + mcq + prac;
+      totEl.value = total;
+
+      // Check passing criteria (33% on each component)
+      let passed = true;
+      if (p.cqMax === 70 && cq < 23) passed = false;
+      if (p.cqMax === 50 && cq < 17) passed = false;
+      if (p.cqMax === 100 && cq < 33) passed = false;
+
+      if (p.mcqMax === 30 && mcq < 10) passed = false;
+      if (p.mcqMax === 25 && mcq < 8) passed = false;
+
+      if (p.hasPrac && prac < 8) passed = false;
+
+      let gLabel = 'F';
+      let gCls = 'g-F';
+
+      if (!passed || total < 33) {
+        gLabel = 'F';
+        gCls = 'g-F';
+      } else if (total >= 80) {
+        gLabel = 'A+';
+        gCls = 'g-Ap';
+      } else if (total >= 70) {
+        gLabel = 'A';
+        gCls = 'g-A';
+      } else if (total >= 60) {
+        gLabel = 'A-';
+        gCls = 'g-Am';
+      } else if (total >= 50) {
+        gLabel = 'B';
+        gCls = 'g-B';
+      } else if (total >= 40) {
+        gLabel = 'C';
+        gCls = 'g-C';
+      } else {
+        gLabel = 'D';
+        gCls = 'g-D';
+      }
+
+      gradeEl.textContent = gLabel;
+      gradeEl.className = `grade-chip ${gCls}`;
+    }
+
+    function handleEnterKey(event, field, currentIndex) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        const nextIndex = currentIndex + 1;
+        if (nextIndex < loadedStudents.length) {
+          const nextSid = loadedStudents[nextIndex].id;
+          const nextInp = document.getElementById(`${field}-${nextSid}`);
+          if (nextInp && !nextInp.disabled) {
+            nextInp.focus();
+            nextInp.select();
+          }
+        }
+      }
+    }
+
+    async function saveAllBatchMarks() {
+      if (!loadedStudents.length || !currentPaperMeta) {
+        showAlert('err', 'No student marks to save.');
+        return;
+      }
+
+      const exam = document.getElementById('f-exam').value;
+      const session = document.getElementById('f-session').value;
+      const subjectCode = currentPaperMeta.code;
+
+      const entries = [];
+      loadedStudents.forEach(s => {
+        const isAbsent = document.getElementById(`absent-${s.id}`)?.checked || false;
+        const cqEl = document.getElementById(`cq-${s.id}`);
+        const mcqEl = document.getElementById(`mcq-${s.id}`);
+        const pracEl = document.getElementById(`prac-${s.id}`);
+
+        const cq = isAbsent ? '' : (cqEl ? cqEl.value.trim() : '');
+        const mcq = isAbsent ? '' : (mcqEl ? mcqEl.value.trim() : '');
+        const prac = isAbsent ? '' : (pracEl ? pracEl.value.trim() : '');
+
+        // If not absent and all empty, do not submit as zero
+        if (!isAbsent && cq === '' && mcq === '' && prac === '') {
+          return;
+        }
+
+        entries.push({
+          studentId: s.id,
+          cq: isAbsent ? 0 : cq,
+          mcq: isAbsent ? 0 : mcq,
+          prac: isAbsent ? 0 : prac,
+          absent: isAbsent,
+          selectedOptional: s.optionalSubjects || ''
+        });
+      });
+
+      if (entries.length === 0) {
+        showAlert('info', 'No marks entered to save.');
+        return;
+      }
+
+      const btn = document.getElementById('btn-save-batch');
+      const progWrap = document.getElementById('prog-wrap');
+      const progFill = document.getElementById('prog-fill');
+      const progText = document.getElementById('prog-text');
+
+      btn.disabled = true;
+      btn.textContent = 'Saving Marks...';
+      progWrap.style.display = 'block';
+      progFill.style.width = '45%';
+      progText.textContent = `Saving ${entries.length} student marks to database...`;
+
+      try {
+        const res = await fetch('/api/teacher/save-marks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            subjectCode: subjectCode,
+            examType: exam,
+            year: session,
+            entries: entries
+          })
+        });
+
+        const result = await res.json();
+        progFill.style.width = '100%';
+
+        if (result.ok) {
+          showAlert('ok', result.message || 'All marks saved successfully.');
+          progText.textContent = 'Marks saved successfully.';
+          setTimeout(() => { progWrap.style.display = 'none'; }, 2500);
+        } else {
+          showAlert('err', result.message || 'Failed to save marks.');
+          progWrap.style.display = 'none';
+        }
+      } catch (err) {
+        showAlert('err', 'Network error while saving marks.');
+        progWrap.style.display = 'none';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Save All Marks';
+      }
+    }
+
+    async function doLogout() {
+      try {
+        await fetch('/api/logout', { method: 'POST' });
+      } catch(e) {}
+      window.location.href = '/teacher-login.html';
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    window.addEventListener('DOMContentLoaded', initSession);
+  </script>
+</body>
+</html>

@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teacher Login - Moinuddin Adarsha Mohila College</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary: #6d28d9;
+      --primary-dark: #581c87;
+      --primary-light: #8b5cf6;
+      --purple-accent: #c084fc;
+      --border-color: #e2e8f0;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --navy: #0d2b45;
+      --gold: #a97c28;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      min-height: 100vh;
+      width: 100%;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: #fff;
+      overflow-x: hidden;
+      background-color: #1a082e;
+      background-image: 
+        linear-gradient(135deg, rgba(35, 10, 66, 0.88) 0%, rgba(76, 29, 149, 0.80) 42%, rgba(109, 40, 217, 0.65) 75%, rgba(24, 7, 50, 0.92) 100%),
+        url('FL_Over Building.jpg');
+      background-size: cover;
+      background-position: center center;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .login-wrapper {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 40px 6vw;
+      gap: 40px;
+    }
+
+    .brand-section {
+      flex: 1 1 55%;
+      max-width: 780px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .college-pill {
+      display: inline-block;
+      margin-bottom: 20px;
+      padding: 6px 16px;
+      background: rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 999px;
+      width: fit-content;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #e9d5ff;
+    }
+
+    .college-title-bn {
+      font-family: 'Hind Siliguri', sans-serif;
+      font-size: 2.2rem;
+      font-weight: 700;
+      line-height: 1.25;
+      margin-bottom: 8px;
+      color: #ffffff;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+    }
+
+    .college-title-en {
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      margin-bottom: 16px;
+      color: rgba(255, 255, 255, 0.92);
+      text-transform: uppercase;
+    }
+
+    .panel-badge {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 8px 18px;
+      background: rgba(234, 179, 8, 0.2);
+      border: 1px solid rgba(234, 179, 8, 0.4);
+      border-radius: 8px;
+      color: #fef08a;
+      font-size: 0.86rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      width: fit-content;
+    }
+
+    .system-desc {
+      margin-top: 18px;
+      font-size: 0.88rem;
+      color: rgba(255, 255, 255, 0.78);
+      max-width: 540px;
+      line-height: 1.6;
+    }
+
+    .login-section {
+      flex: 1 1 40%;
+      max-width: 440px;
+      width: 100%;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .login-card {
+      width: 100%;
+      background: #ffffff;
+      border-radius: 20px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      color: var(--text-main);
+      overflow: hidden;
+    }
+
+    .card-top-accent {
+      height: 6px;
+      background: linear-gradient(90deg, #6d28d9, #c084fc, #6d28d9);
+    }
+
+    .card-head {
+      padding: 26px 26px 14px;
+      text-align: center;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .card-title {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: #1e1b4b;
+      margin-bottom: 4px;
+    }
+
+    .card-subtitle {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .card-body {
+      padding: 22px 26px 28px;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #334155;
+      margin-bottom: 6px;
+      letter-spacing: 0.02em;
+    }
+
+    .form-input, .form-select {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid var(--border-color);
+      border-radius: 12px;
+      font-size: 0.92rem;
+      font-family: inherit;
+      color: #0f172a;
+      background: #f8fafc;
+      transition: all 0.2s;
+    }
+
+    .form-input:focus, .form-select:focus {
+      outline: none;
+      border-color: var(--primary);
+      background: #ffffff;
+      box-shadow: 0 0 0 4px rgba(109, 40, 217, 0.12);
+    }
+
+    .pw-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .pw-toggle-btn {
+      position: absolute;
+      right: 10px;
+      background: none;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #64748b;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .pw-toggle-btn:hover {
+      background: #f1f5f9;
+      color: #1e293b;
+    }
+
+    #login-err-msg {
+      display: none;
+      margin-bottom: 16px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #991b1b;
+      font-size: 0.83rem;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .submit-btn {
+      width: 100%;
+      padding: 13px 18px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #6d28d9 0%, #7c3aed 100%);
+      color: #ffffff;
+      font-size: 0.96rem;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 4px 14px rgba(109, 40, 217, 0.35);
+    }
+
+    .submit-btn:hover {
+      background: linear-gradient(135deg, #581c87 0%, #6d28d9 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(109, 40, 217, 0.45);
+    }
+
+    .submit-btn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .back-btn-wrap {
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid #f1f5f9;
+      text-align: center;
+    }
+
+    .back-btn {
+      display: inline-block;
+      font-size: 0.84rem;
+      font-weight: 700;
+      color: #64748b;
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .back-btn:hover {
+      color: var(--primary);
+    }
+
+    @media (max-width: 900px) {
+      .login-wrapper {
+        flex-direction: column;
+        justify-content: center;
+        padding: 40px 20px;
+      }
+      .brand-section {
+        max-width: 100%;
+        text-align: center;
+        align-items: center;
+      }
+      .college-pill, .panel-badge {
+        margin-left: auto;
+        margin-right: auto;
+      }
+      .login-section {
+        justify-content: center;
+        max-width: 440px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="login-wrapper">
+    <div class="brand-section">
+      <div class="college-pill">Academic Management System</div>
+      <h1 class="college-title-bn">মইনউদ্দিন আদর্শ মহিলা কলেজ, সিলেট</h1>
+      <h2 class="college-title-en">Moinuddin Adarsha Mohila College, Sylhet</h2>
+      <div class="panel-badge">Subject Teacher Portal</div>
+      <p class="system-desc">
+        Dedicated batch mark input system for subject teachers. Select your designated subject and enter your password to record student marks for creative questions (CQ), multiple choice (MCQ), and practical components.
+      </p>
+    </div>
+
+    <div class="login-section">
+      <div class="login-card">
+        <div class="card-top-accent"></div>
+        <div class="card-head">
+          <h3 class="card-title">Teacher Sign In</h3>
+          <p class="card-subtitle">Select your subject and enter your credentials</p>
+        </div>
+
+        <div class="card-body">
+          <div id="login-err-msg">Invalid subject or password</div>
+
+          <form id="teacher-login-form">
+            <div class="form-group">
+              <label class="form-label" for="t-subject">Subject Name</label>
+              <select id="t-subject" class="form-select" required>
+                <option value="">-- Select Subject --</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="t-password">Password</label>
+              <div class="pw-wrap">
+                <input id="t-password" class="form-input" type="password" placeholder="Enter password" required autocomplete="current-password">
+                <button type="button" class="pw-toggle-btn" id="pw-toggle-btn" onclick="togglePasswordVisibility()">Show</button>
+              </div>
+            </div>
+
+            <button type="submit" class="submit-btn" id="submit-btn">Sign In to Teacher Panel</button>
+
+            <div class="back-btn-wrap">
+              <a href="/login.html" class="back-btn">Back to Main Login</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const DEFAULT_SUBJECTS = [
+      'Bangla',
+      'English',
+      'Information & Communication Technology (ICT)',
+      'Physics',
+      'Chemistry',
+      'Biology',
+      'Higher Mathematics',
+      'Civics & Good Governance',
+      'Economics',
+      'Sociology',
+      'Social Work',
+      'Islamic History & Culture',
+      'Logic',
+      'Home Science',
+      'Accounting',
+      'Business Organization & Management',
+      'Finance, Banking & Insurance'
+    ];
+
+    async function loadSubjects() {
+      const selectEl = document.getElementById('t-subject');
+      try {
+        const res = await fetch('/api/teacher/subjects-list');
+        const data = await res.json();
+        let subjects = (data.ok && data.subjects && data.subjects.length > 0) ? data.subjects : DEFAULT_SUBJECTS;
+        
+        selectEl.innerHTML = '<option value="">-- Select Subject --</option>';
+        subjects.forEach(sub => {
+          const opt = document.createElement('option');
+          opt.value = sub;
+          opt.textContent = sub;
+          selectEl.appendChild(opt);
+        });
+      } catch (err) {
+        selectEl.innerHTML = '<option value="">-- Select Subject --</option>';
+        DEFAULT_SUBJECTS.forEach(sub => {
+          const opt = document.createElement('option');
+          opt.value = sub;
+          opt.textContent = sub;
+          selectEl.appendChild(opt);
+        });
+      }
+    }
+
+    function togglePasswordVisibility() {
+      const pwInput = document.getElementById('t-password');
+      const btn = document.getElementById('pw-toggle-btn');
+      if (pwInput.type === 'password') {
+        pwInput.type = 'text';
+        btn.textContent = 'Hide';
+      } else {
+        pwInput.type = 'password';
+        btn.textContent = 'Show';
+      }
+    }
+
+    document.getElementById('teacher-login-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const subject = document.getElementById('t-subject').value.trim();
+      const password = document.getElementById('t-password').value;
+      const errBox = document.getElementById('login-err-msg');
+      const btn = document.getElementById('submit-btn');
+
+      errBox.style.display = 'none';
+
+      if (!subject || !password) {
+        errBox.textContent = 'Please select a subject and enter your password.';
+        errBox.style.display = 'block';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Signing in...';
+
+      try {
+        const response = await fetch('/api/teacher/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ subject, password })
+        });
+        const result = await response.json();
+
+        if (result.ok) {
+          window.location.href = result.redirect || '/teacher-panel.html';
+          return;
+        }
+
+        errBox.textContent = result.message || 'Invalid Subject or Password.';
+        errBox.style.display = 'block';
+      } catch (error) {
+        errBox.textContent = 'Cannot reach server. Please check your connection.';
+        errBox.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Sign In to Teacher Panel';
+      }
+    });
+
+    window.addEventListener('DOMContentLoaded', loadSubjects);
+  </script>
+</body>
+</html>
