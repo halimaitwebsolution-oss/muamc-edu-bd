@@ -237,19 +237,30 @@ with app.app_context():
                 except Exception as _se:
                     print(f"[DB] SQLite roll constraint check note: {_se}")
 
-            for _tbl, _col, _col_def in _COLUMN_MIGRATIONS:
+            if app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('postgresql'):
+                # PostgreSQL: batch all migrations in one transaction for speed
                 try:
-                    if app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('postgresql'):
+                    for _tbl, _col, _col_def in _COLUMN_MIGRATIONS:
                         _conn.execute(_text(f"ALTER TABLE {_tbl} ADD COLUMN IF NOT EXISTS {_col} {_col_def};"))
-                    else:
-                        _conn.execute(_text(f"ALTER TABLE {_tbl} ADD COLUMN {_col} {_col_def};"))
                     _conn.commit()
-                    print(f"[DB] Column migration OK: {_tbl}.{_col}")
+                    print(f"[DB] Column migrations applied ({len(_COLUMN_MIGRATIONS)} columns checked).")
                 except Exception as _me:
                     try:
                         _conn.rollback()
                     except Exception:
                         pass
+                    print(f"[DB] Column migration batch warning: {_me}")
+            else:
+                # SQLite: apply individually (no IF NOT EXISTS support)
+                for _tbl, _col, _col_def in _COLUMN_MIGRATIONS:
+                    try:
+                        _conn.execute(_text(f"ALTER TABLE {_tbl} ADD COLUMN {_col} {_col_def};"))
+                        _conn.commit()
+                    except Exception as _me:
+                        try:
+                            _conn.rollback()
+                        except Exception:
+                            pass
 
             # Ensure photo column is TEXT type in PostgreSQL
             if app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('postgresql'):
@@ -264,6 +275,19 @@ with app.app_context():
                             pass
     except Exception as _m_err:
         print(f"[DB] WARNING: Column migrations skipped: {_m_err}")
+
+    # Ensure performance indexes exist (safe to re-run)
+    try:
+        with db.engine.connect() as _conn:
+            if app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('postgresql'):
+                _conn.execute(_text("CREATE INDEX IF NOT EXISTS ix_students_cls_group_session ON students (cls, \"group\", session);"))
+                _conn.execute(_text("CREATE INDEX IF NOT EXISTS ix_students_session ON students (session);"))
+                _conn.execute(_text("CREATE INDEX IF NOT EXISTS ix_students_year ON students (year);"))
+                _conn.execute(_text("CREATE INDEX IF NOT EXISTS ix_marks_exam_subj_student ON marks (exam_type, subject_code, student_id);"))
+                _conn.commit()
+                print("[DB] Performance indexes verified.")
+    except Exception as _idx_err:
+        print(f"[DB] Index creation note: {_idx_err}")
 
 # ─────────────────────────────────────────────
 # Credentials — read from .env; never hard-coded
@@ -2880,7 +2904,9 @@ def bulk_humanities_subjects():
             continue
 
         # Look up student by cls, session, and roll
-        stu = Student.query.filter_by(cls=cls, session=session, roll=roll).first()
+        stu = Student.query.filter_by(cls=cls, roll=roll).filter(
+            (Student.session == session) | (Student.year == session)
+        ).first()
         if not stu:
             not_found += 1
             results.append({
@@ -3633,6 +3659,30 @@ def save_batch_subject_marks():
         return jsonify({'ok': False, 'message': 'subjectCode, examType, and year are required'}), 400
 
     try:
+        all_sids = [e.get('studentId') for e in entries if e.get('studentId')]
+        if not all_sids:
+            return jsonify({'ok': True, 'message': 'No entries to save'})
+
+        # Single bulk DELETE instead of N individual deletes
+        Mark.query.filter(
+            Mark.student_id.in_(all_sids),
+            Mark.exam_type == exam_type,
+            Mark.subject_code == subject_code
+        ).delete(synchronize_session='fetch')
+
+        # Pre-fetch selected_optional for entries that don't provide it
+        existing_opts = {}
+        needs_opt_lookup = [e.get('studentId') for e in entries
+                            if e.get('studentId') and e.get('selectedOptional') is None]
+        if needs_opt_lookup:
+            opt_rows = Mark.query.filter(
+                Mark.student_id.in_(needs_opt_lookup),
+                Mark.exam_type == exam_type
+            ).all()
+            for m in opt_rows:
+                if m.student_id not in existing_opts:
+                    existing_opts[m.student_id] = m.selected_optional or ''
+
         for entry in entries:
             sid = entry.get('studentId')
             if not sid:
@@ -3643,18 +3693,13 @@ def save_batch_subject_marks():
             prac_raw = entry.get('prac')
             is_absent = bool(entry.get('absent', False))
 
-            # A row is empty only if not absent AND all marks are blank
             is_empty = (not is_absent) and \
                        (cq_raw == '' or cq_raw is None) and \
                        (mcq_raw == '' or mcq_raw is None) and \
                        (prac_raw == '' or prac_raw is None)
 
-            # Delete existing marks for this student, exam type, and subject code
-            Mark.query.filter_by(student_id=sid, exam_type=exam_type, subject_code=subject_code).delete()
-
             if not is_empty:
                 try:
-                    # When absent: store zeros with absent=True flag
                     cq   = 0 if is_absent else int(float(cq_raw or 0))
                     mcq  = 0 if is_absent else int(float(mcq_raw or 0))
                     prac = 0 if is_absent else int(float(prac_raw or 0))
@@ -3663,8 +3708,7 @@ def save_batch_subject_marks():
 
                 selected_optional = entry.get('selectedOptional')
                 if selected_optional is None:
-                    existing = Mark.query.filter_by(student_id=sid, exam_type=exam_type).first()
-                    selected_optional = existing.selected_optional if existing else ''
+                    selected_optional = existing_opts.get(sid, '')
 
                 mark = Mark(
                     student_id=sid,

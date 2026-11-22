@@ -35,6 +35,13 @@ class Student(db.Model):
     student_submitted = db.Column(db.Boolean, default=False)  # True once student self-submits via portal
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    __table_args__ = (
+        db.Index('ix_students_cls_group_session', 'cls', 'group', 'session'),
+        db.Index('ix_students_roll_cls', 'roll', 'cls'),
+        db.Index('ix_students_session', 'session'),
+        db.Index('ix_students_year', 'year'),
+    )
+
     # Cascade-delete marks when student is deleted
     marks = db.relationship('Mark', backref='student', lazy=True,
                             cascade='all, delete-orphan')
@@ -75,6 +82,7 @@ class Mark(db.Model):
         db.Index('ix_marks_student_exam',    'student_id', 'exam_type'),
         db.Index('ix_marks_student_subject', 'student_id', 'subject_code'),
         db.Index('ix_marks_exam_subject',    'exam_type',  'subject_code'),
+        db.Index('ix_marks_exam_subj_student', 'exam_type', 'subject_code', 'student_id'),
     )
 
     id                = db.Column(db.Integer,     primary_key=True)
