@@ -385,6 +385,8 @@ async function onClsGroupChange() {
     });
     sesEl.disabled = data.sessions.length === 0;
     exEl.disabled  = data.exam_types.length === 0;
+    if (data.sessions.length === 1) { sesEl.value = data.sessions[0]; }
+    if (data.exam_types.length === 1) { exEl.value = data.exam_types[0]; }
   } catch(err) {
     showAlert('Network error loading filters.', 'err');
   }
@@ -527,7 +529,7 @@ function renderTable(data) {
         return;
       }
       if (!subData || subData.absent) {
-        subCols.forEach(function() { appendTd(tr, 'Ab', 'absent-cell'); });
+        subCols.forEach(function() { appendTd(tr, (subData && subData.absent) ? 'Ab' : '—', (subData && subData.absent) ? 'absent-cell' : 'na-cell'); });
         return;
       }
       subCols.forEach(function(col) {
@@ -614,7 +616,7 @@ function exportExcel() {
       var subData    = stuMarks[sub.code];
       var subCols    = getSubCols(sub);
       if (!applicable) { subCols.forEach(function(){ row.push('N/A'); }); return; }
-      if (!subData || subData.absent) { subCols.forEach(function(){ row.push('Ab'); }); return; }
+      if (!subData || subData.absent) { subCols.forEach(function(){ row.push((subData && subData.absent) ? 'Ab' : ''); }); return; }
       subCols.forEach(function(col) {
         if (col === 'CQ')       row.push((subData.cq   !== null && subData.cq   !== undefined) ? subData.cq   : '');
         else if (col === 'MCQ') row.push((subData.mcq  !== null && subData.mcq  !== undefined) ? subData.mcq  : '');

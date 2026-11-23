@@ -850,6 +850,29 @@ def seat_plan_page():
     return _serve_html('seat-plan.html')
 
 
+CANONICAL_EXAMS = ['First Terminal', 'Half Yearly', 'Annual', 'Pre-Test', 'Test']
+
+
+def normalize_exam_type(val):
+    if not val:
+        return ''
+    s = str(val).strip()
+    norm = s.lower().replace('-', ' ').replace('_', ' ').strip()
+    if norm in ('pre test', 'pretest'):
+        return 'Pre-Test'
+    elif norm in ('half yearly', 'halfyearly'):
+        return 'Half Yearly'
+    elif norm in ('first terminal', 'firstterminal', '1st terminal'):
+        return 'First Terminal'
+    elif norm == 'annual':
+        return 'Annual'
+    elif norm == 'test':
+        return 'Test'
+    elif norm == 'hsc':
+        return 'HSC'
+    return s
+
+
 @app.route('/api/group-results/filters', methods=['GET'])
 @require_auth
 def group_results_filters():
@@ -869,19 +892,27 @@ def group_results_filters():
     students = Student.query.filter_by(cls=cls_val, group=group_val).all()
     sessions_set = set()
     for s in students:
-        val = (s.session or s.year or '').strip()
+        val = (s.session or s.year or '').strip().replace('\u2013', '-').replace('\u2014', '-')
         if val:
             sessions_set.add(val)
     sessions = sorted(sessions_set, reverse=True)
+    if not sessions:
+        sessions = ['2025-2026', '2024-2025']
 
     student_ids = [s.id for s in students]
-    exam_types_set = set()
+    exam_types_set = set(CANONICAL_EXAMS)
     if student_ids:
         marks_rows = Mark.query.filter(Mark.student_id.in_(student_ids)).all()
         for m in marks_rows:
             if m.exam_type:
-                exam_types_set.add(m.exam_type)
-    exam_types = sorted(exam_types_set)
+                exam_types_set.add(normalize_exam_type(m.exam_type))
+
+    def _exam_sort_key(e):
+        try:
+            return (0, CANONICAL_EXAMS.index(e))
+        except ValueError:
+            return (1, e)
+    exam_types = sorted(exam_types_set, key=_exam_sort_key)
 
     # Build subject list filtered by class (1st/2nd paper)
     raw_subs = _copy.deepcopy(SUBJECT_LIST.get(group_val, []))
@@ -946,9 +977,10 @@ def get_group_results():
             s['name'] = s['name'].replace(' 1st Paper', '').replace(' 2nd Paper', '') + suffix
         subjects.append(s)
 
-    # Fetch students sorted by roll
+    # Fetch students sorted by roll (support hyphen and dash variants in session)
+    session_variants = [session_val, session_val.replace('-', '\u2013'), session_val.replace('-', '\u2014')]
     students = Student.query.filter_by(cls=cls_val, group=group_val).filter(
-        (Student.session == session_val) | (Student.year == session_val)
+        Student.session.in_(session_variants) | Student.year.in_(session_variants)
     ).all()
 
     def _roll_key(st):
@@ -964,11 +996,13 @@ def get_group_results():
 
     student_ids = [s.id for s in students]
 
-    # Fetch all marks for this exam_type in a single query
+    # Fetch all marks for this exam_type in a single query (case/hyphen-insensitive)
+    from sqlalchemy import func
     all_codes = [sub['code'] for sub in subjects]
+    norm_exam = exam_type.lower().replace('-', ' ').replace('_', ' ').strip()
     mark_rows = Mark.query.filter(
         Mark.student_id.in_(student_ids),
-        Mark.exam_type == exam_type,
+        func.lower(func.replace(func.replace(Mark.exam_type, '-', ' '), '_', ' ')) == norm_exam,
         Mark.subject_code.in_(all_codes),
     ).all()
 
@@ -1022,7 +1056,7 @@ def get_group_results():
                 applicable = humanities_applicable.get(stu.id, {}).get(sub['code'])
                 if applicable is False:
                     continue
-                is_optional = sub.get('optional', False)
+                is_optional = (sub['code'] in opt_codes) or any(x in opt_codes for x in HUMANITIES_SUBJECT_PAIR_MAP.get(sub['code'], []))
             else:
                 is_optional = sub.get('optional', False) and (sub['code'] in opt_codes)
                 if sub.get('optional', False) and not (sub['code'] in opt_codes):
@@ -3064,24 +3098,34 @@ def _get_marks_dict(student_id=None):
         marks = Mark.query.all()
 
     for mark in marks:
-        sid  = mark.student_id
-        exam = mark.exam_type
-        subj = mark.subject_code
+        sid      = mark.student_id
+        raw_exam = mark.exam_type or ''
+        canon    = normalize_exam_type(raw_exam)
+        subj     = mark.subject_code
 
-        result.setdefault(sid, {}).setdefault(exam, {})
+        result.setdefault(sid, {}).setdefault(canon, {})
 
-        result[sid][exam][subj] = {
+        entry = {
             'cq':       mark.cq,
             'mcq':      mark.mcq,
             'prac':     mark.prac,
             'absent':   mark.absent or False,
             'ey':       mark.year,
-            'examType': mark.exam_type,
+            'examType': canon,
             'year':     mark.year,
         }
+        result[sid][canon][subj] = entry
 
         if mark.selected_optional:
-            result[sid][exam]['selectedOptional'] = mark.selected_optional
+            result[sid][canon]['selectedOptional'] = mark.selected_optional
+
+        # Standard aliases so frontend lookups succeed with both variations
+        if canon == 'Pre-Test':
+            result[sid].setdefault('Pre-test', result[sid][canon])
+        elif canon == 'Half Yearly':
+            result[sid].setdefault('Half-Yearly', result[sid][canon])
+        if raw_exam and raw_exam != canon:
+            result[sid].setdefault(raw_exam, result[sid][canon])
 
     return result
 
@@ -3110,20 +3154,32 @@ def clear_all_marks():
 def get_marks(sid):
     result = {}
     for mark in Mark.query.filter_by(student_id=sid).all():
-        exam = mark.exam_type
-        subj = mark.subject_code
-        result.setdefault(exam, {})
-        result[exam][subj] = {
+        raw_exam = mark.exam_type or ''
+        canon    = normalize_exam_type(raw_exam)
+        subj     = mark.subject_code
+
+        result.setdefault(canon, {})
+        entry = {
             'cq':       mark.cq,
             'mcq':      mark.mcq,
             'prac':     mark.prac,
             'absent':   mark.absent or False,
             'ey':       mark.year,
-            'examType': mark.exam_type,
+            'examType': canon,
             'year':     mark.year,
         }
+        result[canon][subj] = entry
+
         if mark.selected_optional:
-            result[exam]['selectedOptional'] = mark.selected_optional
+            result[canon]['selectedOptional'] = mark.selected_optional
+
+        # Standard aliases
+        if canon == 'Pre-Test':
+            result.setdefault('Pre-test', result[canon])
+        elif canon == 'Half Yearly':
+            result.setdefault('Half-Yearly', result[canon])
+        if raw_exam and raw_exam != canon:
+            result.setdefault(raw_exam, result[canon])
 
     return jsonify({'ok': True, 'data': result})
 

@@ -532,11 +532,12 @@
               <label>Exam Type</label>
               <select id="r-exam" onchange="searchResult()">
                 <option value="">-- All --</option>
-                <option>Half-Yearly</option>
-                <option>Annual</option>
-                <option>Pre-test</option>
-                <option>Test</option>
-                <option>HSC</option>
+                <option value="First Terminal">First Terminal</option>
+                <option value="Half Yearly">Half Yearly</option>
+                <option value="Annual">Annual</option>
+                <option value="Pre-Test">Pre-Test</option>
+                <option value="Test">Test</option>
+                <option value="HSC">HSC</option>
               </select>
             </div>
           </div>
@@ -588,11 +589,12 @@
               <label>Exam Type</label>
               <select id="br-exam" onchange="loadBulkResult()">
                 <option value="">-- All --</option>
-                <option>Half-Yearly</option>
-                <option>Annual</option>
-                <option>Pre-test</option>
-                <option>Test</option>
-                <option>HSC</option>
+                <option value="First Terminal">First Terminal</option>
+                <option value="Half Yearly">Half Yearly</option>
+                <option value="Annual">Annual</option>
+                <option value="Pre-Test">Pre-Test</option>
+                <option value="Test">Test</option>
+                <option value="HSC">HSC</option>
               </select>
             </div>
           </div>
@@ -653,11 +655,12 @@
               <label>Exam Type *</label>
               <select id="ptr-exam" onchange="loadBatchResultCards()">
                 <option value="">-- Select Exam --</option>
-                <option>Half-Yearly</option>
-                <option>Annual</option>
-                <option>Pre-test</option>
-                <option>Test</option>
-                <option>HSC</option>
+                <option value="First Terminal">First Terminal</option>
+                <option value="Half Yearly">Half Yearly</option>
+                <option value="Annual">Annual</option>
+                <option value="Pre-Test">Pre-Test</option>
+                <option value="Test">Test</option>
+                <option value="HSC">HSC</option>
               </select>
             </div>
           </div>
@@ -1034,6 +1037,38 @@
       $('res-panel-batch').style.display = tab === 'batch' ? '' : 'none';
     }
 
+    function normExamName(str) {
+      return String(str || '').toLowerCase().replace(/[-\s_]/g, '');
+    }
+
+    function getStudentMarksForExam(stuMarks, examType) {
+      if (!stuMarks || !examType) return null;
+      if (stuMarks[examType]) return stuMarks[examType];
+      const norm = normExamName(examType);
+      for (const k of Object.keys(stuMarks)) {
+        if (k === 'selectedOptional') continue;
+        if (normExamName(k) === norm) {
+          return stuMarks[k];
+        }
+      }
+      return null;
+    }
+
+    function getStudentExamName(stuMarks, examType) {
+      if (!stuMarks || !examType) return examType;
+      if (stuMarks[examType]) return examType;
+      const norm = normExamName(examType);
+      for (const k of Object.keys(stuMarks)) {
+        if (k === 'selectedOptional') continue;
+        if (normExamName(k) === norm) {
+          return k;
+        }
+      }
+      return examType;
+    }
+
+    const normSession = (str) => String(str || '').replace(/[\u2013\u2014]/g, '-').trim();
+
     // -- Search result ------------------------------------------------------
     function searchResult() {
       const cls = $$('rs-class'), grp = $$('rs-group'), sn = $$('rs-session'), roll = v('rs-roll');
@@ -1044,7 +1079,7 @@
         return;
       }
 
-      let ss = _students.filter(s => s.cls === cls && s.group === grp && (s.session || s.year || '').replace(/–/g, '-') === sn.replace(/–/g, '-'));
+      let ss = _students.filter(s => s.cls === cls && s.group === grp && (normSession(s.session) === normSession(sn) || normSession(s.year) === normSession(sn)));
       if (roll) ss = ss.filter(s => s.roll.includes(roll) || s.name.toLowerCase().includes(roll.toLowerCase()));
 
       if (!ss.length) { ml.innerHTML = '<div class="alert alert-info">No students found.</div>'; return; }
@@ -1052,8 +1087,8 @@
       const et = $$('r-exam');
       ml.innerHTML = ss.map(s => {
         const examKeys = _marks[s.id] ? Object.keys(_marks[s.id]).filter(k => k !== 'selectedOptional') : [];
-        const hasMarks = examKeys.length > 0;
-        const examText = hasMarks ? examKeys.join(', ') : 'No exams recorded';
+        const hasMarks = et ? !!getStudentMarksForExam(_marks[s.id], et) : (examKeys.length > 0);
+        const examText = examKeys.length > 0 ? examKeys.join(', ') : 'No exams recorded';
         return `<div class="card" style="margin-bottom:12px;">
   <div class="card-head">
     <h3 style="font-size:.85rem;">${(window.escHtml||(x=>x))(s.name)}</h3>
@@ -1089,13 +1124,13 @@
       out.innerHTML = `<div class="loading-container"><div class="loading-spinner"></div><div class="loading-text">Loading results...</div></div>`;
 
       setTimeout(() => {
-        let ss = _students.filter(s => s.cls === cls && s.group === grp && (s.session || s.year || '').replace(/–/g, '-') === sn.replace(/–/g, '-'));
+        let ss = _students.filter(s => s.cls === cls && s.group === grp && (normSession(s.session) === normSession(sn) || normSession(s.year) === normSession(sn)));
         if (!ss.length) {
           out.innerHTML = `<div class="card"><div class="card-body"><div class="empty-state"><div class="es-rule"></div><p>No students found.</p></div></div></div>`;
           return;
         }
 
-        const subs = flatSubs(grp);
+        const subs = flatSubs(grp, cls);
         let html = `<div class="bulk-group-section">
           <div class="bulk-group-hd">
             <span>${grp} Group — ${cls}</span>
@@ -1111,9 +1146,9 @@
           </thead><tbody>`;
 
         ss.forEach((stu, i) => {
-          const examKeys = _marks[stu.id] ? Object.keys(_marks[stu.id]) : [];
+          const examKeys = _marks[stu.id] ? Object.keys(_marks[stu.id]).filter(k => k !== 'selectedOptional') : [];
           const tgt = et || examKeys[examKeys.length - 1];
-          const marks = (tgt && _marks[stu.id] && _marks[stu.id][tgt]) ? _marks[stu.id][tgt] : {};
+          const marks = (tgt && _marks[stu.id]) ? (getStudentMarksForExam(_marks[stu.id], tgt) || {}) : {};
           
           const studentSubs = flatStudentSubs(stu, stu.cls);
           const res = computeStudentGPAAndResult(stu, marks, studentSubs);
@@ -1164,9 +1199,9 @@
     function downloadExcel() {
       const cls = $$('br-class'), grp = $$('br-group'), sn = $$('br-session'), et = $$('br-exam');
       if (!cls || !grp || !sn || !et) { alert('Please select Class, Group, Session and Exam.'); return; }
-      let ss = _students.filter(s => s.cls === cls && s.group === grp && (s.session || s.year || '').replace(/–/g, '-') === sn.replace(/–/g, '-'));
+      let ss = _students.filter(s => s.cls === cls && s.group === grp && (normSession(s.session) === normSession(sn) || normSession(s.year) === normSession(sn)));
       if (!ss.length) { alert('No students found.'); return; }
-      const subs = flatSubs(grp);
+      const subs = flatSubs(grp, cls);
       const header = ['#','Name','Roll Number','Registration'];
       subs.forEach(s => { const nm = s.name.split('(')[0].trim(); header.push(nm+' (CQ)', nm+' (MCQ)', nm+(s.hasPrac?' (PR)':' (—)')); });
       header.push('Total Marks','GPA','Result');
@@ -1174,7 +1209,7 @@
       ss.forEach((stu, i) => {
         const examKeys = _marks[stu.id] ? Object.keys(_marks[stu.id]).filter(k => k !== 'selectedOptional') : [];
         const tgt = et || examKeys[examKeys.length - 1];
-        const marks = (tgt && _marks[stu.id] && _marks[stu.id][tgt]) ? _marks[stu.id][tgt] : {};
+        const marks = (tgt && _marks[stu.id]) ? (getStudentMarksForExam(_marks[stu.id], tgt) || {}) : {};
         
         const studentSubs = flatStudentSubs(stu, stu.cls);
         const res = computeStudentGPAAndResult(stu, marks, studentSubs);
@@ -1207,7 +1242,7 @@
     }
 
     // -- Open result modal --------------------------------------------------
-    function openResultModal(id) {
+    function openResultModal(id, examParam) {
       const stu = _students.find(s => s.id === id);
       if (!stu) return;
       $('result-modal-title').textContent = stu.name + ' (' + stu.roll + ' — ' + stu.cls + ')';
@@ -1215,13 +1250,22 @@
       $('result-modal').style.display = 'flex';
 
       const db = _marks;
-      const avail = db[id] ? Object.keys(db[id]).filter(k => k !== 'selectedOptional') : [];
-      const tgt = $$('r-exam') || avail[avail.length - 1] || null;
-      if (!tgt || !db[id] || !db[id][tgt]) {
+      const stuMarks = db[id] || {};
+      const avail = Object.keys(stuMarks).filter(k => k !== 'selectedOptional');
+      let tgt = examParam || $$('r-exam') || null;
+      let marks = (tgt && stuMarks) ? getStudentMarksForExam(stuMarks, tgt) : null;
+      let resolvedExam = tgt ? getStudentExamName(stuMarks, tgt) : null;
+
+      if (!marks && avail.length > 0) {
+        resolvedExam = avail[avail.length - 1];
+        marks = stuMarks[resolvedExam];
+      }
+
+      if (!marks) {
         $('result-modal-body').innerHTML = '<div class="card"><div class="card-body"><div class="empty-state"><div class="es-rule"></div><p>No marks found. Please enter marks first.</p></div></div></div>';
         return;
       }
-      loadResultIntoModal(id, tgt);
+      loadResultIntoModal(id, resolvedExam);
     }
 
     function closeResultModal() {
@@ -1234,7 +1278,7 @@
       const stu = _students.find(s => s.id === id);
       if (!stu) return;
       const db = _marks;
-      const marks = db[id][examType];
+      const marks = getStudentMarksForExam(db[id], examType) || {};
       const cats = getStudentSubjects(stu, stu.cls);
       const optionalSelected = getOptionalIdByCode(stu.group, stu.optionalSubjects || stu.optional_subject || stu.optional_subjects) ||
                                (marks && marks.selectedOptional);
@@ -1242,9 +1286,8 @@
       // Merit position
       const peers = _students.filter(s => s.cls === stu.cls && s.group === stu.group);
       const peerScores = peers.map(p => {
-        const pMarks = db[p.id] || {};
-        if (!pMarks[examType]) return { id: p.id, gpa: 0, total: 0 };
-        const pm = pMarks[examType];
+        const pm = getStudentMarksForExam(db[p.id], examType);
+        if (!pm) return { id: p.id, gpa: 0, total: 0 };
         const res = computeStudentGPAAndResult(p, pm, flatStudentSubs(p, p.cls));
         return { id: p.id, gpa: res.gpa, total: res.totalMark };
       });
@@ -1273,7 +1316,7 @@
       studentSubs.forEach(sub => {
         let maxMark = 0;
         peers.forEach(p => {
-          const pm = (db[p.id] && db[p.id][examType]) ? db[p.id][examType] : {};
+          const pm = getStudentMarksForExam(db[p.id], examType) || {};
           const mm = pm[sub.code] || {};
           const absent = mm.absent === true || ((mm.cq === '' || mm.cq === undefined) && (mm.mcq === '' || mm.mcq === undefined));
           if(absent) return;
@@ -1463,7 +1506,7 @@
       out.innerHTML = `<div class="loading-container no-print"><div class="loading-spinner"></div><div class="loading-text">Generating result cards...</div></div>`;
 
       setTimeout(() => {
-        let ss = _students.filter(s => s.cls === cls && s.group === grp && (s.session || s.year || '').replace(/–/g, '-') === sn.replace(/–/g, '-'));
+        let ss = _students.filter(s => s.cls === cls && s.group === grp && (normSession(s.session) === normSession(sn) || normSession(s.year) === normSession(sn)));
         if (!ss.length) {
           out.innerHTML = `<div class="card no-print"><div class="card-body"><div class="empty-state"><div class="es-rule"></div><p>No students found.</p></div></div></div>`;
           return;
@@ -1473,9 +1516,8 @@
 
         // Pre-compute peer scores once for merit positioning
         const peerScores = ss.map(p => {
-          const pMarks = db[p.id] || {};
-          if (!pMarks[et]) return { id: p.id, gpa: 0, total: 0 };
-          const pm = pMarks[et];
+          const pm = getStudentMarksForExam(db[p.id], et);
+          if (!pm) return { id: p.id, gpa: 0, total: 0 };
           const res = computeStudentGPAAndResult(p, pm, flatStudentSubs(p, cls));
           return { id: p.id, gpa: res.gpa, total: res.totalMark };
         });
@@ -1490,7 +1532,7 @@
         const qrcodesToGen = [];
 
         ss.forEach((stu) => {
-          const marks = db[stu.id] && db[stu.id][et];
+          const marks = getStudentMarksForExam(db[stu.id], et);
           if (!marks) return; // Skip students with no marks recorded for this exam
 
           generatedCount++;
@@ -1501,9 +1543,9 @@
           let fail = resObj.failCount, tMark = resObj.totalMark, mMax = 0, failSubs = [];
           
           let ey = '';
-          for (const key in db[stu.id][et]) {
-            if (db[stu.id][et][key] && (db[stu.id][et][key].ey || db[stu.id][et][key].year)) {
-              ey = db[stu.id][et][key].ey || db[stu.id][et][key].year;
+          for (const key in marks) {
+            if (key !== 'selectedOptional' && marks[key] && (marks[key].ey || marks[key].year)) {
+              ey = marks[key].ey || marks[key].year;
               break;
             }
           }
@@ -1517,7 +1559,7 @@
           curStudentSubs.forEach(sub => {
             let maxMark = 0;
             ss.forEach(p => {
-              const pm = (db[p.id] && db[p.id][et]) ? db[p.id][et] : {};
+              const pm = getStudentMarksForExam(db[p.id], et) || {};
               const mm = pm[sub.code] || {};
               const absent = mm.absent === true || ((mm.cq === '' || mm.cq === undefined) && (mm.mcq === '' || mm.mcq === undefined));
               if(absent) return;
