@@ -505,11 +505,11 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--slate);color:var(--
       <div class="fg">
         <label>Exam Type</label>
         <select id="b-exam">
-          <option>Half-Yearly</option>
-          <option>Annual</option>
-          <option>Pre-test</option>
-          <option>Test</option>
-          <option>HSC</option>
+          <option value="First Terminal">First Terminal</option>
+          <option value="Half Yearly">Half Yearly</option>
+          <option value="Annual">Annual</option>
+          <option value="Pre-Test">Pre-Test</option>
+          <option value="Test">Test</option>
         </select>
       </div>
       <div class="fg">
@@ -1149,7 +1149,7 @@ async function loadBatchStudents(){
   const cls     = ($('b-class')    || {}).value || '';
   const grp     = ($('b-group')   || {}).value || '';
   const code    = ($('b-subject') || {}).value || '';
-  batchExamType = ($('b-exam')    || {}).value || 'Half-Yearly';
+  batchExamType = ($('b-exam')    || {}).value || 'First Terminal';
   batchSession  = ($('b-session') || {}).value || '2024-2025';
   setAlert('batch-alert','','');
   if(!cls || !grp){ setAlert('batch-alert','err','Please select both Class and Group.'); return; }
