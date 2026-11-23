@@ -1204,7 +1204,7 @@ TEACHER_CANONICAL_SUBJECTS = {
         'groups': ['Science', 'Humanities', 'Business'],
         'papers': {
             'Class-XI':  {'name': 'Bangla 1st Paper', 'code': '101', 'hasPrac': False, 'cqMax': 70, 'mcqMax': 30},
-            'Class-XII': {'name': 'Bangla 2nd Paper', 'code': '102', 'hasPrac': False, 'cqMax': 70, 'mcqMax': 30},
+            'Class-XII': {'name': 'Bangla 2nd Paper', 'code': '102', 'hasPrac': False, 'cqMax': 100, 'mcqMax': 0},
         }
     },
     'English': {
@@ -4462,7 +4462,7 @@ def _subject_passed(cq, mcq, prac, has_prac, cq_max=70, mcq_max=30):
 SUBJECT_LIST = {
     'Science': [
         {'name': 'Bangla 1st Paper',      'code': '101', 'hasPrac': False, 'cqMax': 70,  'mcqMax': 30, 'optional': False},
-        {'name': 'Bangla 2nd Paper',      'code': '102', 'hasPrac': False, 'cqMax': 70,  'mcqMax': 30, 'optional': False},
+        {'name': 'Bangla 2nd Paper',      'code': '102', 'hasPrac': False, 'cqMax': 100, 'mcqMax': 0 , 'optional': False},
         {'name': 'English 1st Paper',     'code': '107', 'hasPrac': False, 'cqMax': 100, 'mcqMax': 0,  'optional': False},
         {'name': 'English 2nd Paper',     'code': '108', 'hasPrac': False, 'cqMax': 100, 'mcqMax': 0,  'optional': False},
         {'name': 'ICT',                   'code': '275', 'hasPrac': True,  'cqMax': 50,  'mcqMax': 25, 'optional': False},
@@ -4477,7 +4477,7 @@ SUBJECT_LIST = {
     ],
     'Humanities': [
         {'name': 'Bangla 1st Paper',             'code': '101', 'hasPrac': False, 'cqMax': 70,  'mcqMax': 30, 'optional': False},
-        {'name': 'Bangla 2nd Paper',             'code': '102', 'hasPrac': False, 'cqMax': 70,  'mcqMax': 30, 'optional': False},
+        {'name': 'Bangla 2nd Paper',             'code': '102', 'hasPrac': False, 'cqMax': 100, 'mcqMax': 0 , 'optional': False},
         {'name': 'English 1st Paper',            'code': '107', 'hasPrac': False, 'cqMax': 100, 'mcqMax': 0,  'optional': False},
         {'name': 'English 2nd Paper',            'code': '108', 'hasPrac': False, 'cqMax': 100, 'mcqMax': 0,  'optional': False},
         {'name': 'ICT',                          'code': '275', 'hasPrac': True,  'cqMax': 50,  'mcqMax': 25, 'optional': False},
@@ -4496,7 +4496,7 @@ SUBJECT_LIST = {
     ],
     'Business': [
         {'name': 'Bangla 1st Paper',                 'code': '101', 'hasPrac': False, 'cqMax': 70,  'mcqMax': 30, 'optional': False},
-        {'name': 'Bangla 2nd Paper',                 'code': '102', 'hasPrac': False, 'cqMax': 70,  'mcqMax': 30, 'optional': False},
+        {'name': 'Bangla 2nd Paper',                 'code': '102', 'hasPrac': False, 'cqMax': 100, 'mcqMax': 0 , 'optional': False},
         {'name': 'English 1st Paper',                'code': '107', 'hasPrac': False, 'cqMax': 100, 'mcqMax': 0,  'optional': False},
         {'name': 'English 2nd Paper',                'code': '108', 'hasPrac': False, 'cqMax': 100, 'mcqMax': 0,  'optional': False},
         {'name': 'ICT',                              'code': '275', 'hasPrac': True,  'cqMax': 50,  'mcqMax': 25, 'optional': False},
