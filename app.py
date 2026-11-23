@@ -412,8 +412,12 @@ def _serve_html(name, inject_api=True):
     html_path = os.path.join(BASE_DIR, name)
     if not os.path.exists(html_path):
         abort(404, description=f'{name} not found')
-    with open(html_path, 'r', encoding='utf-8') as f:
-        html = f.read()
+    try:
+        with open(html_path, 'r', encoding='utf-8') as f:
+            html = f.read()
+    except UnicodeDecodeError:
+        with open(html_path, 'r', encoding='utf-8', errors='replace') as f:
+            html = f.read()
 
 
     if inject_api:
