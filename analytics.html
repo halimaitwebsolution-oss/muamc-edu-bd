@@ -625,7 +625,12 @@ function setDelMode(m){
   document.getElementById('del-mode-students').classList.toggle('active',m==='students');
   showEl('del-mode-warning',m==='students');
   var ex=document.getElementById('del-exam');
-  if(m==='students'){ex.disabled=true;ex.value='';}
+  if(m==='students'){
+    ex.disabled=true;ex.value='';
+  } else {
+    var ses=document.getElementById('del-session').value;
+    if(ses) delOnSessionChange();
+  }
   var pill=document.getElementById('del-preview-pill');
   if(pill)pill.className='preview-pill '+m;
   resetDelState();delCheckReady();
@@ -633,9 +638,17 @@ function setDelMode(m){
 
 function delOnClassChange(){
   var cls=document.getElementById('del-cls').value;
-  resetDynSels(['del-group','del-session','del-exam']);
+  var grpSel=document.getElementById('del-group');
+  grpSel.value='';
+  grpSel.disabled=!cls;
+  if(grpSel.options.length <= 1){
+    grpSel.innerHTML = '<option value="">&#8212; Select Department &#8212;</option>' +
+      '<option value="Science">Science</option>' +
+      '<option value="Humanities">Humanities</option>' +
+      '<option value="Business">Business</option>';
+  }
+  resetDynSels(['del-session','del-exam']);
   resetDelState();
-  if(cls)document.getElementById('del-group').disabled=false;
   delCheckReady();
 }
 
@@ -650,9 +663,10 @@ function delOnGroupChange(){
       var d=await r.json();
       _dfd=d.ok?d:null;
       if(!d.ok){setAlert('del-alert',d.message||'Failed to load sessions.');delCheckReady();return;}
-      fillSel('del-session',d.sessions,function(s){return s;},function(s){return s;},'&#8212; Select Session &#8212;');
-      document.getElementById('del-session').disabled=d.sessions.length===0;
-      if(!d.sessions.length)setAlert('del-alert','No students found for this class and department.','warn');
+      var sessions = (d.sessions && d.sessions.length) ? d.sessions : ['2024-2025', '2025-2026', '2026-2027'];
+      fillSel('del-session',sessions,function(s){return s;},function(s){return s;},'&#8212; Select Session &#8212;');
+      document.getElementById('del-session').disabled=sessions.length===0;
+      if(!d.sessions || !d.sessions.length)setAlert('del-alert','No students currently found for this class and department.','warn');
     }catch(e){setAlert('del-alert','Network error loading sessions.');}
     delCheckReady();
   })();
@@ -661,9 +675,21 @@ function delOnGroupChange(){
 function delOnSessionChange(){
   resetDynSels(['del-exam']);resetDelState();setAlert('del-alert','');
   var ses=document.getElementById('del-session').value;
-  if(ses&&_dfd&&_dfd.exam_types&&_dMode==='marks'){
-    fillSel('del-exam',_dfd.exam_types,function(e){return e;},function(e){return e;},'&#8212; Select Exam &#8212;');
-    document.getElementById('del-exam').disabled=_dfd.exam_types.length===0;
+  if(ses&&_dMode==='marks'){
+    var exSelect=document.getElementById('del-exam');
+    exSelect.innerHTML='<option value="">&#8212; Select Exam &#8212;</option><option value="__ALL__">All Exams (All marks in session)</option>';
+    var examSet=new Set();
+    if(_dfd&&_dfd.exam_types){
+      _dfd.exam_types.forEach(function(e){if(e)examSet.add(e);});
+    }
+    ['First Terminal','Half Yearly','Annual','Pre-Test','Test'].forEach(function(e){examSet.add(e);});
+    examSet.forEach(function(e){
+      var opt=document.createElement('option');
+      opt.value=e;
+      opt.textContent=e;
+      exSelect.appendChild(opt);
+    });
+    exSelect.disabled=false;
   }
   delCheckReady();
 }

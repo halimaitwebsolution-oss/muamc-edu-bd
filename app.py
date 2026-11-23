@@ -4079,7 +4079,11 @@ def analytics_deletion_count():
     # Build student query
     q = Student.query.filter_by(cls=cls_val, group=group_val)
     if sess_val:
-        q = q.filter((Student.session == sess_val) | (Student.year == sess_val))
+        dash_sess = sess_val.replace('-', '–')
+        q = q.filter(
+            (Student.session == sess_val) | (Student.year == sess_val) |
+            (Student.session == dash_sess) | (Student.year == dash_sess)
+        )
     student_ids = [s.id for s in q.with_entities(Student.id).all()]
 
     if not student_ids:
@@ -4090,8 +4094,10 @@ def analytics_deletion_count():
 
     # mode == 'marks'
     mq = Mark.query.filter(Mark.student_id.in_(student_ids))
-    if exam_val:
-        mq = mq.filter_by(exam_type=exam_val)
+    if exam_val and exam_val not in ('__ALL__', 'all', 'All Exams'):
+        from sqlalchemy import func
+        norm_exam = exam_val.replace('-', ' ').strip().lower()
+        mq = mq.filter(func.lower(func.replace(Mark.exam_type, '-', ' ')) == norm_exam)
     count = mq.count()
     return jsonify({'ok': True, 'count': count})
 
@@ -4117,15 +4123,21 @@ def analytics_delete_marks_bulk():
         return jsonify({'ok': False, 'message': 'cls, group and session are required'}), 400
 
     q = Student.query.filter_by(cls=cls_val, group=group_val)
-    q = q.filter((Student.session == sess_val) | (Student.year == sess_val))
+    dash_sess = sess_val.replace('-', '–')
+    q = q.filter(
+        (Student.session == sess_val) | (Student.year == sess_val) |
+        (Student.session == dash_sess) | (Student.year == dash_sess)
+    )
     student_ids = [s.id for s in q.with_entities(Student.id).all()]
 
     if not student_ids:
         return jsonify({'ok': True, 'deleted': 0})
 
     mq = Mark.query.filter(Mark.student_id.in_(student_ids))
-    if exam_val:
-        mq = mq.filter_by(exam_type=exam_val)
+    if exam_val and exam_val not in ('__ALL__', 'all', 'All Exams'):
+        from sqlalchemy import func
+        norm_exam = exam_val.replace('-', ' ').strip().lower()
+        mq = mq.filter(func.lower(func.replace(Mark.exam_type, '-', ' ')) == norm_exam)
 
     deleted = mq.count()
     mq.delete(synchronize_session=False)
@@ -4158,7 +4170,11 @@ def analytics_delete_students_bulk():
         return jsonify({'ok': False, 'message': 'cls, group and session are required'}), 400
 
     q = Student.query.filter_by(cls=cls_val, group=group_val)
-    q = q.filter((Student.session == sess_val) | (Student.year == sess_val))
+    dash_sess = sess_val.replace('-', '–')
+    q = q.filter(
+        (Student.session == sess_val) | (Student.year == sess_val) |
+        (Student.session == dash_sess) | (Student.year == dash_sess)
+    )
     students_to_delete = q.all()
 
     if not students_to_delete:
